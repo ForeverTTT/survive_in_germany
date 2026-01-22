@@ -1,0 +1,133 @@
+{
+  "stats": {
+    "ects": 10,
+    "money": 4440,
+    "sanity": 80,
+    "semester": 1,
+    "chapter": 1,
+    "level": 3,
+    "levelHistory": [
+      "1-1",
+      "1-3"
+    ],
+    "historyLogs": [
+      {
+        "chapter": 1,
+        "level": 1,
+        "title": "法兰克福机场的冷风",
+        "description": "你把两只沉得像装了石头的行李箱拖出航站楼，金属拉杆在地面上发出刺耳的摩擦声。电子屏一排排红色“取消”，广播里的德语像雨点一样砸下来：罢工、停运、改线。夹着雪的冷风从衣领钻进脊背，你的手机电量只剩一格，手心却全是汗。你突然意识到：从这一刻开始，你需要用自己的选择，把这座陌生城市过成生活。",
+        "choiceMade": "守在站台等慢车，赌一把运气",
+        "resultDescription": "你在站台上站成一根冰冷的旗杆：两小时、三小时，列车信息一变再变，最后干脆变成“取消”。你还是叫了车，但已经晚了——喉咙像被砂纸磨过，鼻子开始发酸。你第一次直面“德国效率”的另一面：耐心会被消耗到见底。",
+        "timestamp": 1769062364132
+      }
+    ],
+    "rngSeed": "n5yafe",
+    "tags": [],
+    "achievements": [],
+    "delayCount": 0,
+    "workCount": 0,
+    "npcs": [
+      {
+        "id": "prof_schmidt",
+        "name": "Schmidt 教授",
+        "role": "严厉的系主任",
+        "description": "TUM 著名的“杀手课”讲师，对学术规范有着病态的坚持。",
+        "favorability": 20,
+        "avatar": "👨‍🏫",
+        "isLocked": false
+      },
+      {
+        "id": "senior_l",
+        "name": "L学长",
+        "role": "社交达人/打工皇帝",
+        "description": "在德国待了 n 年，没有他搞不定的兼职和内推。",
+        "favorability": 40,
+        "avatar": "👨‍🎓",
+        "isLocked": false
+      },
+      {
+        "id": "flatmate_clara",
+        "name": "Clara",
+        "role": "同病相怜的室友",
+        "description": "来自意大利的交换生，和你一样每天都在纠结垃圾分类。",
+        "favorability": 50,
+        "avatar": "👩‍🎨",
+        "isLocked": false
+      },
+      {
+        "id": "hausmeister_klaus",
+        "name": "Hausmeister Klaus",
+        "role": "宿舍管理员",
+        "description": "掌握着你宿舍钥匙和暖气命运的男人，通常只在 10:00-11:00 办公。",
+        "favorability": 10,
+        "avatar": "👴",
+        "isLocked": true
+      },
+      {
+        "id": "auslaenderbehoerde_frau_muller",
+        "name": "Frau Müller",
+        "role": "外管局办事员",
+        "description": "她的表情决定了你下一次签证的有效期长度。",
+        "favorability": 5,
+        "avatar": "👩‍💼",
+        "isLocked": true
+      }
+    ],
+    "mailbox": [
+      {
+        "id": "welcome_letter",
+        "title": "欢迎来到德国！",
+        "sender": "德国驻华大使馆",
+        "content": "恭喜你获得了留学签证！你的留德生活正式开启。\n\n记住，在德国，信箱 (Briefkasten) 是非常重要的。你会收到来自政府、银行、保险公司甚至邻居的各种信件。请务必养成每天检查信箱的习惯，并确保你的名字贴在信箱上，否则你可能会错过重要的账单或通知。",
+        "type": "info",
+        "timestamp": 1769062347099,
+        "isRead": true
+      }
+    ],
+    "memoryAlbum": [],
+    "diary": [
+      {
+        "id": "diary_1769062484411",
+        "content": "1232131231",
+        "mood": "neutral",
+        "chapter": 1,
+        "level": 3,
+        "location": "Anmeldung 注册噩梦",
+        "timestamp": 1769062484411
+      }
+    ],
+    "identity": "tum_slave"
+  },
+  "currentScenario": {
+    "id": "1-3",
+    "title": "Anmeldung 注册噩梦",
+    "description": "邮件像一记闷拳：两周内必须完成户口登记，否则后续一切都可能卡住。你打开预约网站，最早的时间在三个月后——屏幕上那行日期像一个冷笑话。你忽然明白，在这里，很多事不是“你想不想做”，而是“你能不能排到队”。",
+    "imagePrompt": "German government building exterior, bureaucratic, imposing grey architecture",
+    "options": [
+      {
+        "text": "凌晨5点去现场排队，赌当天的号",
+        "resultDescription": "天还没亮，街灯把你的影子拉得很长。队伍里的人抱着文件夹，呼出的白气一团团散开。你排了三小时才拿到号码，窗口前的工作人员用十分钟盖章、敲键盘、递回纸张——那张登记证明薄得像一片叶子，却重得像一张通行证。",
+        "statChanges": {
+          "sanity": -15
+        }
+      },
+      {
+        "text": "花150€找专业代办，把时间买回来",
+        "resultDescription": "你把材料交出去，像把一部分焦虑也交出去。钱花得肉痛，但你省下了清晨的寒风、漫长的等待和被德语淹没的无力感。你终于能把注意力放回“读书”这件事上。",
+        "statChanges": {
+          "money": -150,
+          "sanity": 10
+        }
+      }
+    ]
+  },
+  "bgImage": "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=1920&q=80",
+  "globalAchievements": [],
+  "settings": {
+    "textSpeed": 2,
+    "volume": 80,
+    "showEffects": true,
+    "useLLM": true
+  },
+  "timestamp": 1769062878089
+}

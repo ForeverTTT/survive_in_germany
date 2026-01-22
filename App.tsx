@@ -1,324 +1,1165 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { GameStats, Scenario, GameStatus, GameOption } from './types';
-import { INITIAL_STATS, START_SCENARIO } from './constants';
-import { generateNextScenario, generateScenarioImage } from './services/geminiService';
-import StatBar from './components/StatBar';
-import LevelMap from './components/LevelMap';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { GameStats, Scenario, GameStatus, GameOption, HistoryEntry, GameSettings, Achievement, Identity, Letter, MemoryImage, CrisisEvent, DiaryEntry } from './types';
+import { INITIAL_STATS, START_SCENARIO, LOADING_TIPS, LOADING_MESSAGES, DAG_STAGES, DEFAULT_SETTINGS, BGM_URL, ACHIEVEMENTS, CLICK_SFX_URL, SUCCESS_SFX_URL, LETTER_TEMPLATES, INITIAL_NPCS, CRISIS_EVENTS } from './constants';
+import { getScenarioByChapterLevel, getNextScenario, ALL_SCENARIOS, getScenarioById } from './scenariosDatabase';
+import { generateScenarioImage } from './services/geminiService';
+import { IMAGE_STATE_KEY } from './utils/imageState';
 
+// 通用 UI 组件
+import LevelMap from './components/LevelMap';
+import Toast from './components/Toast';
+import ConfirmDialog from './components/ConfirmDialog';
+import SettingsMenu from './components/SettingsMenu';
+import IdentitySelector from './components/IdentitySelector';
+import AchievementToast from './components/AchievementToast';
+import SocialMap from './components/SocialMap';
+import CrisisOverlay from './components/CrisisOverlay';
+import MailboxModal from './components/MailboxModal';
+import MemoryAlbumModal from './components/MemoryAlbumModal';
+import DiaryModal from './components/DiaryModal';
+
+// 页面组件
+import MainMenu from './pages/Start/MainMenu';
+import GameLoader from './pages/Loading/GameLoader';
+import PlayPage from './pages/Play/PlayPage';
+import ResultPage from './pages/Result/ResultPage';
+
+// 首页主题图
+import introBg from './image/intro.png';
+
+// 关卡背景图兜底：从本地 image/ 随机挑一张（避免任何网图）
+const LOCAL_SCENE_BG_POOL: string[] = Object.values(
+  import.meta.glob('./image/*.png', { eager: true, import: 'default' })
+) as string[];
+
+const pickRandomLocalSceneBg = () => {
+  if (!LOCAL_SCENE_BG_POOL.length) return introBg;
+  return LOCAL_SCENE_BG_POOL[Math.floor(Math.random() * LOCAL_SCENE_BG_POOL.length)] || introBg;
+};
 const SAVE_KEY = 'de_survival_simulator_save_v1';
+const SETTINGS_KEY = 'de_survival_simulator_settings_v1';
+const GLOBAL_PROGRESS_KEY = 'de_survival_simulator_global_v1';
+const MENU_BG_CACHE_KEY = 'de_survival_simulator_menu_bg';
+// 选项结果浮层停留时长（毫秒）：让玩家有时间读完结果
+const RESULT_OVERLAY_DURATION_MS = 7000;
 
 const App: React.FC = () => {
-  const [status, setStatus] = useState<GameStatus>(GameStatus.START);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const audioRef = React.useRef<HTMLAudioElement>(null);
+
+  // 核心状态
   const [stats, setStats] = useState<GameStats>(INITIAL_STATS);
+  const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
+  const [globalAchievements, setGlobalAchievements] = useState<string[]>([]);
+  const [settings, setSettings] = useState<GameSettings>(() => {
+    try {
+      const saved = localStorage.getItem(SETTINGS_KEY);
+      return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    } catch (err) {
+      console.warn("Settings cache corrupted, reset to defaults.", err);
+      try {
+        localStorage.removeItem(SETTINGS_KEY);
+      } catch {}
+      return DEFAULT_SETTINGS;
+    }
+  });
   const [currentScenario, setCurrentScenario] = useState<Scenario | null>(null);
   const [bgImage, setBgImage] = useState<string>('');
   const [loadingMsg, setLoadingMsg] = useState<string>('正在准备降落法兰克福...');
   const [resultOverlay, setResultOverlay] = useState<string | null>(null);
   const [showMap, setShowMap] = useState<boolean>(false);
+  const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [showIdentitySelector, setShowIdentitySelector] = useState<boolean>(false);
+  const [showSocialMap, setShowSocialMap] = useState<boolean>(false);
+  const [showMailbox, setShowMailbox] = useState<boolean>(false);
+  const [showMemoryAlbum, setShowMemoryAlbum] = useState<boolean>(false);
+  const [showDiary, setShowDiary] = useState<boolean>(false);
+  const [activeCrisis, setActiveCrisis] = useState<CrisisEvent | null>(null);
+  const [activeAchievement, setActiveAchievement] = useState<Achievement | null>(null);
   const [hasSave, setHasSave] = useState<boolean>(false);
+  const [menuBg, setMenuBg] = useState<string>(() => {
+    try {
+      return localStorage.getItem(MENU_BG_CACHE_KEY) || '';
+    } catch {
+      return '';
+    }
+  });
+  const [loadingTip, setLoadingTip] = useState<string>('');
+  const [microEvent, setMicroEvent] = useState<{ text: string; statImpact: string } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [showConfirmMenu, setShowConfirmMenu] = useState<boolean>(false);
 
-  // Check for existing save on mount and status changes
+  // 全局播放音效函数
+  const playSfx = useCallback((url: string) => {
+    const audio = new Audio(url);
+    audio.volume = (settings.volume / 100) * 0.5; // 音效音量稍小一点，避免太突兀
+    audio.play().catch(() => {}); 
+  }, [settings.volume]);
+
+  // 全局点击音效监听
   useEffect(() => {
-    const saved = localStorage.getItem(SAVE_KEY);
-    setHasSave(!!saved);
-  }, [status]);
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // 检查点击的是否是按钮或按钮内的元素
+      if (target.closest('button')) {
+        playSfx(CLICK_SFX_URL);
+      }
+    };
+    document.addEventListener('click', handleGlobalClick);
+    return () => document.removeEventListener('click', handleGlobalClick);
+  }, [playSfx]);
+
+  // 检查成就解锁逻辑
+  const checkAchievements = useCallback((currentStats: GameStats) => {
+    const unlockedIds = [...new Set([...(currentStats.achievements || []), ...globalAchievements])];
+    const achievementsToUnlock: Achievement[] = [];
+
+    if (!unlockedIds.includes('sanity_collapse') && currentStats.sanity < 10 && currentStats.sanity > 0) {
+      const ach = ACHIEVEMENTS.find(a => a.id === 'sanity_collapse')!;
+      achievementsToUnlock.push(ach);
+    }
+
+    if (!unlockedIds.includes('db_victim') && currentStats.delayCount >= 3) {
+      const ach = ACHIEVEMENTS.find(a => a.id === 'db_victim')!;
+      achievementsToUnlock.push(ach);
+    }
+
+    if (!unlockedIds.includes('illegal_work') && currentStats.workCount >= 5) {
+      const ach = ACHIEVEMENTS.find(a => a.id === 'illegal_work')!;
+      achievementsToUnlock.push(ach);
+    }
+
+    if (!unlockedIds.includes('graduate_victory') && currentStats.ects >= 180) {
+      const ach = ACHIEVEMENTS.find(a => a.id === 'graduate_victory')!;
+      achievementsToUnlock.push(ach);
+    }
+
+    if (achievementsToUnlock.length > 0) {
+      const newUnlockedIds = [...new Set([...unlockedIds, ...achievementsToUnlock.map(a => a.id)])];
+      setStats(prev => ({ ...prev, achievements: newUnlockedIds }));
+      setGlobalAchievements(newUnlockedIds);
+      localStorage.setItem(GLOBAL_PROGRESS_KEY, JSON.stringify({ achievements: newUnlockedIds }));
+      setActiveAchievement(achievementsToUnlock[0]);
+      playSfx(SUCCESS_SFX_URL); // 播放成就解锁音效
+    }
+  }, [globalAchievements]);
+
+  // 在状态改变时检查成就
+  useEffect(() => {
+    checkAchievements(stats);
+  }, [stats.money, stats.sanity, stats.ects, checkAchievements]);
+
+  // 自动存档逻辑：全时段同步数据，并智能合并剧情进度
+  useEffect(() => {
+    // 检查是否有实质性的全局数据（日记、信件、成就）或已经开始了游戏
+    const hasGlobalData = stats.diary?.length > 0 || stats.mailbox?.length > 0 || stats.achievements?.length > 0;
+    
+    if (stats.identity || hasGlobalData) {
+      // 关键：在主菜单操作时，不要覆盖掉已有的剧情进度
+      const existingSaveStr = localStorage.getItem(SAVE_KEY);
+      let scenarioToSave = currentScenario;
+      let bgToSave = bgImage;
+
+      if (!scenarioToSave && existingSaveStr) {
+        try {
+          const existing = JSON.parse(existingSaveStr);
+          scenarioToSave = existing.currentScenario;
+          bgToSave = existing.bgImage;
+        } catch (e) {
+          // ignore parse errors
+        }
+      }
+
+      const saveData = {
+        stats,
+        currentScenario: scenarioToSave, 
+        bgImage: bgToSave, 
+        globalAchievements,
+        settings,
+        timestamp: Date.now()
+      };
+      
+      // 1. 同步到浏览器本地存储 (LocalStorage)
+      localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+      setHasSave(!!scenarioToSave);
+
+      // 2. 同步到物理磁盘 (Local Filesystem via Node Server)
+      const API_BASE = `${window.location.protocol}//${window.location.hostname}:3001`;
+      fetch(`${API_BASE}/api/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(saveData)
+      }).catch(err => console.warn("Local File Server not running, skipping disk sync."));
+    }
+  }, [stats, currentScenario, bgImage, globalAchievements, settings]);
+
+  // 伪随机数生成器 (PRNG) - 保证种子复现
+  const seededRandom = (seed: string) => {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < seed.length; i++) {
+      h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+    }
+    return () => {
+      h = Math.imul(h ^ (h >>> 16), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      return ((h ^= h >>> 16) >>> 0) / 4294967296;
+    };
+  };
+
+  // 触发随机加载事件
+  const rollMicroEvent = (currentStats: GameStats) => {
+    const rng = seededRandom(currentStats.rngSeed + currentStats.levelHistory.length)();
+    if (rng > 0.7) { // 30% 概率触发
+      const events = [
+        { text: "在地铁座椅缝隙捡到了 0.25 欧瓶子", impact: { money: 0.25 }, msg: "Money +0.25€" },
+        { text: "今天阳光明媚，你在草坪躺平了一会", impact: { sanity: 5 }, msg: "Sanity +5" },
+        { text: "突然想起今天是周日，超市关门了", impact: { sanity: -2 }, msg: "Sanity -2" },
+        { text: "在路边看到一张很有艺术感的过期海报", impact: { sanity: 1 }, msg: "Sanity +1" }
+      ];
+      const ev = events[Math.floor(rng * events.length)];
+      setMicroEvent({ text: ev.text, statImpact: ev.msg });
+      return ev.impact;
+    }
+    setMicroEvent(null);
+    return {};
+  };
+
+  // 保存设置到本地
+  const updateSettings = (newSettings: GameSettings) => {
+    setSettings(newSettings);
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
+    showToast("设置已应用 (Settings Applied)");
+  };
+
+  // 监听音量变化
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = settings.volume / 100;
+    }
+  }, [settings.volume]);
+
+  // 音乐解锁逻辑
+  const startMusic = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.play().then(() => {
+        // 播放成功后移除全局监听，避免不必要的开销
+        document.removeEventListener('mousedown', startMusic);
+        document.removeEventListener('keydown', startMusic);
+        document.removeEventListener('touchstart', startMusic);
+      }).catch(() => {});
+    }
+  }, []);
+
+  // 尝试自动播放并添加全局首触解锁
+  useEffect(() => {
+    startMusic();
+    document.addEventListener('mousedown', startMusic);
+    document.addEventListener('keydown', startMusic);
+    document.addEventListener('touchstart', startMusic);
+    return () => {
+      document.removeEventListener('mousedown', startMusic);
+      document.removeEventListener('keydown', startMusic);
+      document.removeEventListener('touchstart', startMusic);
+    };
+  }, [startMusic]);
+
+  // 🚨 终极保护：5秒后强制解除黑屏（即使 useEffect 没执行）
+  useEffect(() => {
+    const ultimateTimeout = setTimeout(() => {
+      console.error("🆘 Ultimate timeout triggered - forcing app to load");
+      setIsDataLoaded(true);
+    }, 5000);
+    return () => clearTimeout(ultimateTimeout);
+  }, []);
+
+  // 1. 核心数据初始化 (仅在应用启动时运行一次)
+  useEffect(() => {
+    const API_BASE = `${window.location.protocol}//${window.location.hostname}:3001`;
+    const syncFromDisk = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      try {
+        const response = await fetch(`${API_BASE}/api/load`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (response.ok) {
+          const diskData = await response.json();
+          if (diskData && diskData.stats) {
+            // 关键：磁盘存档可能比浏览器存档旧。这里选“更新”的那份作为唯一真相，保证主界面/游戏内信箱一致。
+            let localSave: any = null;
+            try {
+              const raw = localStorage.getItem(SAVE_KEY);
+              localSave = raw ? JSON.parse(raw) : null;
+            } catch {
+              localSave = null;
+            }
+            const diskTs = Number(diskData.timestamp || 0);
+            const localTs = Number(localSave?.timestamp || 0);
+            const useLocal = !!localSave && localSave?.stats && localTs > diskTs;
+            const chosen = useLocal ? localSave : diskData;
+
+            // 日记特殊处理：无论选哪份存档，都合并“磁盘(物理txt同步)”与 localStorage，避免恢复时日记被覆盖丢失
+            const mergeDiaries = (a: any[] | undefined, b: any[] | undefined) => {
+              const map = new Map<string, any>();
+              const push = (arr?: any[]) => {
+                if (!Array.isArray(arr)) return;
+                for (const e of arr) {
+                  if (e && e.id) map.set(String(e.id), e);
+                }
+              };
+              push(a);
+              push(b);
+              return Array.from(map.values()).sort((x, y) => (Number(y?.timestamp || 0) - Number(x?.timestamp || 0)));
+            };
+            const mergedDiary = mergeDiaries(diskData?.stats?.diary, localSave?.stats?.diary);
+            if (chosen?.stats) {
+              chosen.stats.diary = mergedDiary;
+            }
+
+            console.log(useLocal ? "Using newer LocalStorage save." : "Using disk save.");
+            showToast(useLocal ? "已载入更新的浏览器存档 (Prefer Local)" : "本地物理存档已同步 (Data Synced from Disk)");
+
+            setStats(prev => ({
+              ...prev,
+              ...chosen.stats,
+              npcs: ((chosen.stats?.npcs) || prev.npcs).map((npc: any) => {
+                if (npc.id === 'senior_li' || npc.name === '李学长') {
+                  return { ...npc, id: 'senior_l', name: 'L学长' };
+                }
+                return npc;
+              })
+            }));
+            
+            if (chosen.currentScenario) {
+              // 重要：存档里可能带着旧文案，这里用本地数据库的最新关卡覆盖（若能找到）
+              const refreshedScenario =
+                (chosen.currentScenario?.id && getScenarioById(chosen.currentScenario.id)) ||
+                chosen.currentScenario;
+              setCurrentScenario(refreshedScenario);
+              setBgImage(chosen.bgImage || '');
+            }
+            if (chosen.globalAchievements) {
+              setGlobalAchievements(chosen.globalAchievements);
+            }
+            if (chosen.settings) {
+              setSettings(chosen.settings);
+            }
+            setHasSave(!!chosen.currentScenario);
+            return true;
+          }
+        }
+      } catch (e) {
+        clearTimeout(timeoutId);
+        console.warn("Local File Server not reachable, using browser storage only.");
+      }
+      return false;
+    };
+
+    const loadInitialData = async () => {
+      // 🚨 紧急保护：3秒强制加载完成，避免永久黑屏
+      const emergencyTimeout = setTimeout(() => {
+        console.warn("⚠️ Emergency timeout: Force loading complete");
+        setIsDataLoaded(true);
+      }, 3000);
+
+      try {
+        const synced = await syncFromDisk();
+        if (!synced) {
+          const saved = localStorage.getItem(SAVE_KEY);
+          if (saved) {
+            try {
+              const { stats: savedStats, currentScenario: savedScenario, bgImage: savedBg } = JSON.parse(saved);
+              if (savedStats) {
+                setStats(prev => ({
+                  ...prev,
+                  ...savedStats,
+                  npcs: (savedStats.npcs || prev.npcs).map((npc: any) => {
+                    if (npc.id === 'senior_li' || npc.name === '李学长') {
+                      return { ...npc, id: 'senior_l', name: 'L学长' };
+                    }
+                    return npc;
+                  }),
+                  diary: savedStats.diary || [],
+                  mailbox: savedStats.mailbox || [],
+                  memoryAlbum: savedStats.memoryAlbum || [],
+                  achievements: savedStats.achievements || []
+                }));
+                if (savedScenario) {
+                  // 重要：用本地数据库的最新关卡覆盖旧存档文本（若能找到）
+                  const refreshedScenario =
+                    (savedScenario?.id && getScenarioById(savedScenario.id)) || savedScenario;
+                  setCurrentScenario(refreshedScenario);
+                  setBgImage(savedBg || '');
+                  setHasSave(true);
+                } else {
+                  setHasSave(false);
+                }
+              } else {
+                setHasSave(false);
+              }
+            } catch (parseErr) {
+              console.warn("LocalStorage data corrupted, clearing...", parseErr);
+              localStorage.removeItem(SAVE_KEY);
+              setHasSave(false);
+            }
+          } else {
+            setHasSave(false);
+          }
+        }
+      } catch (err) {
+        console.error("Initialization Error:", err);
+        setHasSave(false);
+      } finally {
+        clearTimeout(emergencyTimeout);
+        setIsDataLoaded(true);
+      }
+
+      // 载入全局成就
+      try {
+        const globalData = localStorage.getItem(GLOBAL_PROGRESS_KEY);
+        if (globalData) {
+          const { achievements } = JSON.parse(globalData);
+          setGlobalAchievements(achievements || []);
+        }
+      } catch (e) {
+        console.warn("Global data corrupted, clearing...", e);
+        localStorage.removeItem(GLOBAL_PROGRESS_KEY);
+      }
+    };
+
+    loadInitialData();
+  }, []); // 空依赖数组，只在 mount 时执行
+
+  // 2. 页面背景和导航安全检查
+  useEffect(() => {
+    // 首页背景：使用本地 intro.png（并且把旧默认图的缓存替换掉）
+    const OLD_DEFAULT_MENU_BG = 'https://images.unsplash.com/photo-1546726747-0411da142385?w=1920&q=80';
+    const shouldReplace =
+      !menuBg ||
+      menuBg === OLD_DEFAULT_MENU_BG ||
+      menuBg.includes('images.unsplash.com/photo-1546726747-0411da142385');
+
+    if (shouldReplace) {
+      setMenuBg(introBg);
+      localStorage.setItem(MENU_BG_CACHE_KEY, introBg);
+    }
+
+    if (location.pathname === '/loading') {
+      setLoadingTip(LOADING_TIPS[Math.floor(Math.random() * LOADING_TIPS.length)]);
+    }
+
+    // 安全检查：如果直接访问 /play 但没有场景数据，退回主菜单
+    // 增加一个小延时或检查 location.state，防止在载入过程中被踢回
+    if (location.pathname === '/play' && !currentScenario && isDataLoaded && location.state?.loading !== true) {
+      navigate('/');
+    }
+  }, [location.pathname, menuBg, currentScenario, navigate, isDataLoaded]);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  // 信箱逻辑
+  const markLetterAsRead = (id: string) => {
+    setStats(prev => ({
+      ...prev,
+      mailbox: prev.mailbox.map(l => l.id === id ? { ...l, isRead: true } : l)
+    }));
+  };
+
+  const handleLetterAction = (letter: Letter) => {
+    if (!letter.action) return;
+    const { impact, result } = letter.action;
+    setStats(prev => ({
+      ...prev,
+      money: prev.money + (impact.money || 0),
+      sanity: Math.max(0, Math.min(100, prev.sanity + (impact.sanity || 0))),
+      // 动作执行后移除该动作，标记为已处理
+      mailbox: prev.mailbox.map(l => l.id === letter.id ? { ...l, action: undefined } : l)
+    }));
+    showToast(result);
+  };
+
+  const triggerRandomLetter = (currentStats: GameStats) => {
+    // 20% 概率触发新信件
+    if (Math.random() > 0.8) {
+      const template = LETTER_TEMPLATES[Math.floor(Math.random() * LETTER_TEMPLATES.length)];
+      // 检查是否已经有同名的未读信件，避免重复
+      if (currentStats.mailbox.some(l => l.title === template.title && !l.isRead)) return null;
+
+      const newLetter = {
+        ...template,
+        id: `letter_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        timestamp: Date.now(),
+        isRead: false
+      };
+      return newLetter;
+    }
+    return null;
+  };
+
+  // 记忆相册逻辑
+  const addToMemoryAlbum = (url: string, title: string, currentStats: GameStats) => {
+    // 只允许入库“已成功加载过的背景图”
+    try {
+      const raw = localStorage.getItem(IMAGE_STATE_KEY);
+      const okList = raw ? (JSON.parse(raw)?.ok as string[] | undefined) : undefined;
+      if (okList && Array.isArray(okList) && !okList.includes(url)) {
+        console.warn("Skip album capture: image not confirmed loaded yet.", url);
+        return;
+      }
+    } catch {
+      // ignore parse errors, allow save
+    }
+    const newImage = {
+      id: `img_${Date.now()}`,
+      url,
+      title,
+      chapter: currentStats.chapter,
+      level: currentStats.level,
+      timestamp: Date.now()
+    };
+    setStats(prev => ({
+      ...prev,
+      memoryAlbum: [newImage, ...(prev.memoryAlbum || [])]
+    }));
+  };
+
+  // 只从“已成功加载过的背景”入相册：由 PlayPage 的 <img onLoad> 触发
+  const pendingAlbumRef = React.useRef<{
+    url: string;
+    title: string;
+    statsSnapshot: GameStats;
+  } | null>(null);
+
+  const queueAlbumCapture = (url: string, title: string, statsSnapshot: GameStats) => {
+    pendingAlbumRef.current = { url, title, statsSnapshot };
+  };
+
+  const handleBackgroundLoaded = (url: string) => {
+    const pending = pendingAlbumRef.current;
+    if (!pending) return;
+    if (pending.url !== url) return; // 只认当前待入库的那张
+    addToMemoryAlbum(pending.url, pending.title, pending.statsSnapshot);
+    pendingAlbumRef.current = null;
+  };
+
+  // 日记逻辑
+  const handleSaveDiary = (content: string, mood: DiaryEntry['mood']) => {
+    const newEntry: DiaryEntry = {
+      id: `diary_${Date.now()}`,
+      content,
+      mood,
+      chapter: stats.chapter,
+      level: stats.level,
+      timestamp: Date.now(),
+      location: currentScenario?.title // 使用当前场景标题作为地点
+    };
+    setStats(prev => ({
+      ...prev,
+      diary: [newEntry, ...(prev.diary || [])]
+    }));
+    showToast("日记已保存 (Diary Entry Saved)");
+  };
+
+  const handleDeleteDiary = (id: string) => {
+    setStats(prev => ({
+      ...prev,
+      diary: (prev.diary || []).filter(entry => entry.id !== id)
+    }));
+    showToast("日记已删除 (Entry Deleted)");
+  };
 
   const saveGame = useCallback(() => {
     try {
-      const saveData = {
-        stats,
-        currentScenario,
-        bgImage,
-        timestamp: Date.now()
-      };
+      const saveData = { stats, currentScenario, bgImage, timestamp: Date.now() };
       localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
       setHasSave(true);
-      alert("进度已成功保存！(Progress Saved)");
+      showToast("进度已成功保存！(Progress Saved)");
     } catch (e) {
-      console.error("Save failed:", e);
-      // Minimal save if quota exceeded (e.g. huge base64 image)
-      try {
-        const minimalSave = { stats, currentScenario, bgImage: '', timestamp: Date.now() };
-        localStorage.setItem(SAVE_KEY, JSON.stringify(minimalSave));
-        alert("进度已保存（背景图因浏览器存储空间限制未保存）。");
-      } catch (e2) {
-        alert("保存失败：存储空间已满。");
-      }
+      showToast("保存失败：存储空间已满。");
     }
   }, [stats, currentScenario, bgImage]);
 
   const loadGame = useCallback(() => {
-    const saved = localStorage.getItem(SAVE_KEY);
-    if (!saved) return;
+    startMusic();
 
+    // 优先：如果初始化同步已经把数据载入 State 了，直接跳转即可
+    if (currentScenario) {
+      navigate('/play', { state: { loading: true } });
+      showToast("继续模拟进度");
+      return;
+    }
+
+    const saved = localStorage.getItem(SAVE_KEY);
+    if (!saved) {
+      showToast("未发现存档");
+      return;
+    }
     try {
       const { stats: savedStats, currentScenario: savedScenario, bgImage: savedBg } = JSON.parse(saved);
-      setStats(savedStats);
-      setCurrentScenario(savedScenario);
+      // 兼容性处理：确保旧存档也有新字段，并更新NPC名称
+      const processedNpcs = (savedStats.npcs || INITIAL_STATS.npcs).map((npc: any) => {
+        if (npc.id === 'senior_li' || npc.name === '李学长') {
+          return { ...npc, id: 'senior_l', name: 'L学长' };
+        }
+        return npc;
+      });
+
+      setStats({
+        ...INITIAL_STATS,
+        ...savedStats,
+        levelHistory: savedStats.levelHistory || [`${savedStats.chapter}-${savedStats.level}`],
+        historyLogs: savedStats.historyLogs || [],
+        npcs: processedNpcs,
+        mailbox: savedStats.mailbox || [],
+        memoryAlbum: savedStats.memoryAlbum || [],
+        diary: savedStats.diary || []
+      });
+      // 重要：用本地数据库的最新关卡覆盖旧存档文本（若能找到）
+      const refreshedScenario =
+        (savedScenario?.id && getScenarioById(savedScenario.id)) || savedScenario;
+      setCurrentScenario(refreshedScenario);
       setBgImage(savedBg);
-      setStatus(GameStatus.PLAYING);
+      showToast("存档已载入");
+      navigate('/play', { state: { loading: true } });
       setShowMap(false);
     } catch (e) {
-      console.error("Load failed:", e);
-      alert("存档文件损坏或格式不正确，无法读取。");
+      showToast("存档文件损坏");
     }
-  }, []);
+  }, [navigate, currentScenario]);
 
-  const startGame = async () => {
-    setStatus(GameStatus.LOADING);
-    setLoadingMsg('正在获取签证信息...');
-    setStats(INITIAL_STATS);
-    try {
-      const img = await generateScenarioImage(START_SCENARIO.imagePrompt);
-      setBgImage(img);
-      setCurrentScenario(START_SCENARIO);
-      setStatus(GameStatus.PLAYING);
-    } catch (e) {
-      console.error(e);
-      // Fallback in case of image generation error
-      setCurrentScenario(START_SCENARIO);
-      setStatus(GameStatus.PLAYING);
+  // 身份选择逻辑
+  const handleIdentitySelect = (identity: Identity) => {
+    setShowIdentitySelector(false);
+    startGameWithIdentity(identity);
+  };
+
+  const startGameWithIdentity = async (identity: Identity) => {
+    startMusic();
+    setLoadingMsg(`正在为 ${identity.name} 办理居留许可...`);
+    
+    // 初始化时加入第一封信：欢迎信
+    const welcomeLetter = {
+      id: 'welcome_letter',
+      title: '欢迎来到德国！',
+      sender: '德国驻华大使馆',
+      content: '恭喜你获得了留学签证！你的留德生活正式开启。\n\n记住，在德国，信箱 (Briefkasten) 是非常重要的。你会收到来自政府、银行、保险公司甚至邻居的各种信件。请务必养成每天检查信箱的习惯，并确保你的名字贴在信箱上，否则你可能会错过重要的账单或通知。',
+      type: 'info' as const,
+      timestamp: Date.now(),
+      isRead: false
+    };
+
+    const finalStats: GameStats = {
+      ...INITIAL_STATS,
+      ...identity.initialStats,
+      identity: identity.id,
+      // 新开局：信箱/相册跟随本局进度，从头开始
+      mailbox: [welcomeLetter],
+      memoryAlbum: [],
+      // 日记仍保留（可跨局）
+      diary: stats.diary || [],
+      achievements: stats.achievements || []
+    };
+    // 新开局：清掉旧进度存档 + 图片状态缓存，避免“旧局残留”
+    try { localStorage.removeItem(SAVE_KEY); } catch {}
+    try { localStorage.removeItem(IMAGE_STATE_KEY); } catch {}
+    setStats(finalStats);
+    navigate('/loading');
+    // 使用本地第一关，但用AI生成背景图
+    const firstScenario = getScenarioByChapterLevel(1, 1);
+    if (firstScenario) {
+      setCurrentScenario(firstScenario);
+      // AI生成图片（异步）
+      generateScenarioImage(firstScenario.imagePrompt).then(generatedImage => {
+        setBgImage(generatedImage);
+        // 相册入库由 PlayPage 的 <img onLoad> 确认后执行，避免“没加载成功也入库”
+        queueAlbumCapture(generatedImage, firstScenario.title, finalStats);
+      }).catch(err => {
+        console.error("图片生成失败:", err);
+        // 使用本地随机兜底（不使用网图）
+        const fallback = pickRandomLocalSceneBg();
+        setBgImage(fallback);
+        queueAlbumCapture(fallback, firstScenario.title, finalStats);
+      });
+      
+      setTimeout(() => {
+        navigate('/play', { state: { loading: true } });
+      }, 8000); // 给AI更多时间生成图片
+    } else {
+      console.error("First scenario not found!");
+      navigate('/');
     }
   };
 
-  const resetToMenu = useCallback(() => {
-    if (confirm("确定要返回主菜单吗？当前的未保存进度将会丢失。")) {
-      setStatus(GameStatus.START);
-      setStats(INITIAL_STATS);
-      setCurrentScenario(null);
-      setBgImage('');
-      setShowMap(false);
-      setResultOverlay(null);
-    }
-  }, []);
+  const startGame = () => {
+    setShowIdentitySelector(true);
+  };
 
-  const handleOptionSelect = async (option: GameOption) => {
+  const handleSocialInteract = (npcId: string, type: 'party' | 'study') => {
+    const npc = stats.npcs.find(n => n.id === npcId);
+    if (!npc || npc.isLocked) return;
+
+    const cost = type === 'party' ? { money: -50, sanity: 15 } : { sanity: -10, favor: 5 };
+    const newNpcs = stats.npcs.map(npc => {
+      if (npc.id === npcId) {
+        const newFavor = Math.min(100, npc.favorability + (type === 'party' ? 10 : 5));
+        return { ...npc, favorability: newFavor };
+      }
+      return npc;
+    });
+
+    if (type === 'party' && stats.money < 50) {
+      showToast("余额不足，无法参加 Party");
+      return;
+    }
+
+    setStats(prev => ({
+      ...prev,
+      money: prev.money + (type === 'party' ? -50 : 0),
+      sanity: Math.max(0, Math.min(100, prev.sanity + (type === 'party' ? 15 : -10))),
+      npcs: newNpcs
+    }));
+    showToast(type === 'party' ? "Party 玩得很开心！好感度+10" : "共同学习虽然累，但收获满满。好感度+5");
+  };
+
+  const handleCrisisDecision = (impact: any, result: string) => {
+    setStats(prev => ({
+      ...prev,
+      money: prev.money + (impact.money || 0),
+      sanity: Math.max(0, Math.min(100, prev.sanity + (impact.sanity || 0))),
+      ects: prev.ects + (impact.ects || 0)
+    }));
+    setActiveCrisis(null);
+    showToast(result);
+  };
+
+  const resetToMenu = useCallback(() => setShowConfirmMenu(true), []);
+  const confirmReset = () => {
+    // 回到主菜单（不清空进度）：继续模拟按钮取决于现有存档/进度
+    // “重新开始/清空进度”在“开始新模拟(选身份)”以及“彻底重置”里处理
+    setShowMap(false);
+    setResultOverlay(null);
+    setShowConfirmMenu(false);
+    navigate('/');
+  };
+
+  const resetAllData = async () => {
+    // 1. 清空本地磁盘
+    const API_BASE = `${window.location.protocol}//${window.location.hostname}:3001`;
+    let diskResetOk = false;
+    try {
+      const res = await fetch(`${API_BASE}/api/reset`, { method: 'POST' });
+      diskResetOk = !!res.ok;
+      if (!res.ok) {
+        throw new Error(`reset failed: ${res.status}`);
+      }
+    } catch (e) {
+      console.error("Failed to reset disk data:", e);
+    }
+
+    // 2. 清空浏览器缓存
+    localStorage.removeItem(SAVE_KEY);
+    localStorage.removeItem(SETTINGS_KEY);
+    localStorage.removeItem(GLOBAL_PROGRESS_KEY);
+    localStorage.removeItem(MENU_BG_CACHE_KEY);
+    localStorage.removeItem(IMAGE_STATE_KEY);
+
+    // 3. 重置所有状态
+    setStats(INITIAL_STATS);
+    setGlobalAchievements([]);
+    setSettings(DEFAULT_SETTINGS);
+    setCurrentScenario(null);
+    setBgImage('');
+    setHasSave(false);
+    showToast(diskResetOk ? "所有数据已永久抹除。" : "已清空浏览器数据，但未能连接本地存档服务器清空硬盘日记/存档。请确认使用 npm run all 后再重试。");
+    navigate('/');
+    // 只有磁盘也清空成功才重载；否则重载会把硬盘旧日记又同步回来
+    if (diskResetOk) {
+      window.location.reload();
+    }
+  };
+
+  // 跳转到之前关卡的逻辑
+  const jumpToLevel = async (targetChapter: number, targetLevel: number) => {
+    const key = `${targetChapter}-${targetLevel}`;
+    const history = stats.levelHistory || [];
+    const historyIdx = history.indexOf(key);
+    if (historyIdx === -1 || (targetChapter === stats.chapter && targetLevel === stats.level)) return;
+
+    // 截断历史记录到目标关卡
+    const newHistory = history.slice(0, historyIdx + 1);
+    const newStats: GameStats = {
+      ...stats,
+      chapter: targetChapter,
+      level: targetLevel,
+      levelHistory: newHistory,
+      historyLogs: (stats.historyLogs || []).slice(0, historyIdx + 1)
+    };
+    
+    setStats(newStats);
+    setShowMap(false);
+    
+    // 从本地数据库加载对应关卡，用AI生成背景
+    setLoadingMsg("正在穿越回之前的抉择点...");
+    navigate('/loading');
+    const targetScenario = getScenarioByChapterLevel(newStats.chapter, newStats.level);
+    if (targetScenario) {
+      setCurrentScenario(targetScenario);
+      // AI生成图片
+      generateScenarioImage(targetScenario.imagePrompt).then(generatedImage => {
+        setBgImage(generatedImage);
+      }).catch(err => {
+        console.error("图片生成失败:", err);
+        setBgImage(pickRandomLocalSceneBg());
+      });
+      
+      setTimeout(() => {
+        navigate('/play', { state: { loading: true } });
+      }, 8000); // 给AI时间生成图片
+    } else {
+      console.error(`Scenario ${newStats.chapter}-${newStats.level} not found!`);
+      navigate('/');
+    }
+  };
+
+  const handleOptionSelect = async (option: GameOption, optionIdx: number) => {
     setResultOverlay(option.resultDescription);
     
-    const newStats = {
+    // 生成历史记录条目 (History Tracking)
+    const historyEntry: HistoryEntry = {
+      chapter: stats.chapter,
+      level: stats.level,
+      title: currentScenario?.title || "",
+      description: currentScenario?.description || "",
+      choiceMade: option.text,
+      resultDescription: option.resultDescription,
+      timestamp: Date.now()
+    };
+
+    // 关卡进度逻辑 (DAG 拓扑推进)
+    const currentStageIdx = DAG_STAGES.findIndex(s => s.includes(stats.level));
+    
+    // 检查是否触发突发大事件 (每 7 关左右)
+    const shouldTriggerCrisis = (stats.levelHistory.length + 1) % 7 === 0;
+
+    let nextLevel = stats.level;
+    let nextChapter = stats.chapter;
+    let nextSemester = stats.semester;
+
+    // 统计逻辑：检查选项是否包含延误或打工关键词
+    let delayInc = 0;
+    let workInc = 0;
+    if (option.text.includes("延误") || option.resultDescription.includes("延误") || option.text.includes("ICE停运")) {
+      delayInc = 1;
+    }
+    if (option.text.includes("打工") || option.text.includes("兼职") || option.text.includes("赚钱")) {
+      workInc = 1;
+    }
+
+    if (currentStageIdx !== -1) {
+      if (currentStageIdx < DAG_STAGES.length - 1) {
+        const nextStage = DAG_STAGES[currentStageIdx + 1];
+        nextLevel = nextStage[optionIdx % nextStage.length];
+      } else {
+        nextLevel = DAG_STAGES[0][0]; 
+        nextChapter += 1;
+        nextSemester += 1;
+      }
+    }
+
+    // 计算属性变化（考虑成就加成）
+    let sanityChange = option.statChanges.sanity || 0;
+    if (delayInc > 0 && sanityChange < 0 && (stats.achievements || []).includes('db_victim')) {
+      sanityChange = Math.floor(sanityChange / 2); // 德铁受害者：延误造成的精神损失减半
+    }
+
+    // NPC 解锁与更名逻辑
+    const updatedNpcs = (stats.npcs || INITIAL_STATS.npcs).map(npc => {
+      let updatedNpc = { ...npc };
+      // 强制更名迁移
+      if (updatedNpc.id === 'senior_li' || updatedNpc.name === '李学长') {
+        updatedNpc.id = 'senior_l';
+        updatedNpc.name = 'L学长';
+      }
+      // 中途解锁逻辑
+      if (updatedNpc.id === 'hausmeister_klaus' && nextChapter === 1 && nextLevel >= 5) {
+        updatedNpc.isLocked = false;
+      }
+      if (updatedNpc.id === 'auslaenderbehoerde_frau_muller' && nextChapter === 1 && nextLevel >= 10) {
+        updatedNpc.isLocked = false;
+      }
+      return updatedNpc;
+    });
+
+    // 尝试触发新信件
+    const newLetter = triggerRandomLetter(stats);
+    const updatedMailbox = newLetter ? [newLetter, ...(stats.mailbox || [])] : (stats.mailbox || []);
+    if (newLetter) {
+      showToast("你收到了一封新信件！📬");
+    }
+
+    const newStats: GameStats = {
+      ...stats,
       ects: stats.ects + (option.statChanges.ects || 0),
       money: stats.money + (option.statChanges.money || 0),
-      sanity: Math.max(0, Math.min(100, stats.sanity + (option.statChanges.sanity || 0))),
-      semester: stats.semester + (option.statChanges.semester || 0)
+      sanity: Math.max(0, Math.min(100, stats.sanity + sanityChange)),
+      semester: nextSemester,
+      chapter: nextChapter,
+      level: nextLevel,
+      levelHistory: [...(stats.levelHistory || []), `${nextChapter}-${nextLevel}`],
+      historyLogs: [...(stats.historyLogs || []), historyEntry],
+      delayCount: (stats.delayCount || 0) + delayInc,
+      workCount: (stats.workCount || 0) + workInc,
+      npcs: updatedNpcs,
+      mailbox: updatedMailbox
     };
     setStats(newStats);
 
-    // End conditions
-    if (newStats.sanity <= 0 || newStats.money <= -1000) {
+    if (newStats.sanity <= 0 || newStats.money <= 0) {
       setTimeout(() => {
-        setStatus(GameStatus.GAMEOVER);
         setResultOverlay(null);
-      }, 3000);
+        navigate('/gameover');
+      }, RESULT_OVERLAY_DURATION_MS);
       return;
     }
-    if (newStats.ects >= 180) {
+    if (newStats.ects >= 180 || newStats.chapter > 4) {
       setTimeout(() => {
-        setStatus(GameStatus.VICTORY);
         setResultOverlay(null);
-      }, 3000);
+        navigate('/victory');
+      }, RESULT_OVERLAY_DURATION_MS);
       return;
     }
 
-    // Transition to next scenario
     setTimeout(async () => {
       setResultOverlay(null);
-      setStatus(GameStatus.LOADING);
-      setLoadingMsg(getRandomLoadingMsg());
-      try {
-        const next = await generateNextScenario(newStats, option.text);
-        const nextImg = await generateScenarioImage(next.imagePrompt);
-        setBgImage(nextImg);
-        setCurrentScenario(next);
-        setStatus(GameStatus.PLAYING);
-      } catch (err) {
-        console.error("Failed to generate scenario:", err);
-        setLoadingMsg("由于罢工，生成系统延误了... 正在重试");
-        // Simple retry mechanism
-        setTimeout(() => handleOptionSelect(option), 3000);
+
+      if (shouldTriggerCrisis) {
+        const randomCrisis = CRISIS_EVENTS[Math.floor(Math.random() * CRISIS_EVENTS.length)];
+        setActiveCrisis(randomCrisis);
+        return;
       }
-    }, 3000);
+
+      setLoadingMsg(LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)]);
+      
+      // 随机加载小事件 (RNG Check)
+      const impact: any = rollMicroEvent(newStats);
+      if (Object.keys(impact).length > 0) {
+        newStats.money += (impact.money || 0);
+        newStats.sanity += (impact.sanity || 0);
+        setStats({ ...newStats });
+      }
+
+      navigate('/loading');
+      // 从本地数据库加载下一关，用AI生成背景
+      const nextScenario = getScenarioByChapterLevel(nextChapter, nextLevel);
+      
+      if (nextScenario) {
+        setCurrentScenario(nextScenario);
+        // AI生成图片
+        generateScenarioImage(nextScenario.imagePrompt).then(generatedImage => {
+          setBgImage(generatedImage);
+          queueAlbumCapture(generatedImage, nextScenario.title, newStats);
+        }).catch(err => {
+          console.error("图片生成失败:", err);
+          // 使用上一关图片优先，否则本地随机兜底（不使用网图）
+          const fallback = bgImage || pickRandomLocalSceneBg();
+          setBgImage(fallback);
+          queueAlbumCapture(fallback, nextScenario.title, newStats);
+        });
+        
+        setTimeout(() => {
+          navigate('/play', { replace: true, state: { loading: true } });
+        }, 8000); // 给AI时间生成图片
+      } else {
+        console.error(`Scenario ${nextChapter}-${nextLevel} not found! Reached end of game.`);
+        // 如果没有更多关卡，判定为胜利
+        setTimeout(() => {
+          setResultOverlay(null);
+          navigate('/victory');
+        }, RESULT_OVERLAY_DURATION_MS);
+      }
+    }, RESULT_OVERLAY_DURATION_MS);
   };
 
-  const getRandomLoadingMsg = () => {
-    const msgs = [
-      "正在处理TK医保公函...",
-      "DB列车正在由于天气原因（有云）延误中...",
-      "正在等待外管局的Termin...",
-      "正在周日关闭的超市门口沉思...",
-      "正在图书馆抢座...",
-      "正在试图读懂德语版电费账单...",
-      "正在经历期末考前的第54次崩溃..."
-    ];
-    return msgs[Math.floor(Math.random() * msgs.length)];
-  };
-
-  // --- RENDERING ---
-
-  if (status === GameStatus.START) {
+  if (!isDataLoaded) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-black p-4 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-40">
-           <img src="https://images.unsplash.com/photo-1546726747-0411da142385?auto=format&fit=crop&q=80&w=2000" className="w-full h-full object-cover grayscale" />
-        </div>
-        <div className="z-10 text-center max-w-2xl px-4">
-          <h1 className="text-5xl md:text-8xl serif-font font-bold mb-6 italic text-white drop-shadow-2xl">
-            德区留子生存模拟器
-          </h1>
-          <p className="text-lg md:text-xl text-gray-300 mb-12 tracking-[0.4em] uppercase opacity-60">
-            German Student Survival Simulator
-          </p>
-          <div className="flex flex-col gap-4 items-center justify-center">
-            <div className="flex flex-col md:flex-row gap-4 justify-center w-full">
-              <button 
-                onClick={startGame}
-                className="px-12 py-4 border border-white text-white hover:bg-white hover:text-black transition-all duration-500 tracking-[0.2em] text-lg font-light backdrop-blur-sm"
-              >
-                开始新模拟 (NEW GAME)
-              </button>
-              {hasSave && (
-                <button 
-                  onClick={loadGame}
-                  className="px-12 py-4 bg-white/10 border border-white/40 text-white hover:bg-white hover:text-black transition-all duration-500 tracking-[0.2em] text-lg font-light backdrop-blur-sm"
-                >
-                  继续模拟 (LOAD GAME)
-                </button>
-              )}
+      <div className="min-h-screen bg-black flex items-center justify-center text-white font-serif italic p-8 text-center">
+        <div className="flex flex-col items-center gap-6 max-w-sm">
+          <div className="w-12 h-12 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+          <div className="space-y-2">
+            <p className="tracking-widest text-lg opacity-80">正在同步留德记忆...</p>
+            <p className="text-xs opacity-40 leading-relaxed uppercase tracking-tighter">Syncing data from local storage & disk</p>
             </div>
             <button 
-              className="px-8 py-3 border border-white/10 text-white/20 cursor-not-allowed tracking-[0.2em] text-sm font-light w-full md:w-auto"
-              disabled
-            >
-              成就集 (LOCKED)
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (status === GameStatus.LOADING) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-4">
-        <div className="w-16 h-16 border-4 border-white/10 border-t-white rounded-full animate-spin mb-8 shadow-[0_0_15px_rgba(255,255,255,0.2)]"></div>
-        <p className="text-xl font-light tracking-widest animate-pulse text-white/80">{loadingMsg}</p>
-      </div>
-    );
-  }
-
-  if (status === GameStatus.GAMEOVER) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-4 text-center">
-        <div className="absolute inset-0 opacity-20 bg-red-900 pointer-events-none"></div>
-        <h2 className="text-7xl font-bold mb-6 serif-font italic text-red-600">模拟终止</h2>
-        <p className="text-xl mb-12 max-w-md text-gray-400">你在德意志的生存挑战以失败告终。可能是因为精神崩溃，也可能是因为钱包空空。准备好回国了吗？</p>
-        <div className="flex gap-4 relative z-10">
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-8 py-3 bg-red-600 text-white font-bold uppercase tracking-widest hover:bg-red-700 transition-colors"
+            onClick={() => setIsDataLoaded(true)}
+            className="mt-4 px-6 py-2 border border-white/20 text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all"
           >
-            重新开始
-          </button>
-          <button 
-            onClick={() => setStatus(GameStatus.START)}
-            className="px-8 py-3 border border-white/20 text-white font-bold uppercase tracking-widest hover:bg-white/10 transition-colors"
-          >
-            返回主界面
+            跳过同步 (Skip Sync)
           </button>
         </div>
       </div>
     );
   }
 
-  if (status === GameStatus.VICTORY) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-4 text-center">
-        <div className="absolute inset-0 opacity-20 bg-green-900 pointer-events-none"></div>
-        <h2 className="text-7xl font-bold mb-6 serif-font italic text-green-500">学成毕业</h2>
-        <p className="text-xl mb-12 max-w-md text-gray-400">恭喜！你拿到了那张价值连城的Urkunde。180个ECTS终于凑齐了。虽然发际线后移了，但你赢了！</p>
-        <button 
-          onClick={() => setStatus(GameStatus.START)}
-          className="px-8 py-3 bg-white text-black font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors relative z-10"
-        >
-          载誉而归
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-black text-white relative flex flex-col overflow-hidden">
-      <StatBar 
+    <div className="relative">
+      <audio 
+        ref={audioRef} 
+        src={BGM_URL} 
+        loop 
+        preload="auto"
+        onCanPlay={() => {
+          startMusic();
+        }}
+        onError={(e) => {
+          console.warn("Remote Audio Load Error, trying local fallback:", e);
+          if (audioRef.current && audioRef.current.src !== window.location.origin + "/bgm.mp3") {
+            audioRef.current.src = "/bgm.mp3";
+            audioRef.current.load();
+          } else {
+            showToast("背景音乐加载失败，请检查网络 (Audio Load Error)");
+          }
+        }}
+      />
+      <Routes>
+        <Route path="/" element={
+          <MainMenu 
+            onStart={startGame} 
+            onLoad={loadGame} 
+            onMapClick={() => setShowMap(true)}
+            onSocialClick={() => setShowSocialMap(true)}
+            onSettingsClick={() => setShowSettings(true)}
+            onMailboxClick={() => setShowMailbox(true)}
+            onMemoryAlbumClick={() => setShowMemoryAlbum(true)}
+            onDiaryClick={() => setShowDiary(true)}
+            hasSave={hasSave} 
+            menuBg={menuBg} 
+            unlockedAchievements={stats.achievements || []}
+            unreadLetters={stats.mailbox?.filter(l => !l.isRead).length || 0}
+          />
+        } />
+        
+        <Route path="/loading" element={
+          <GameLoader 
+            loadingMsg={loadingMsg} 
+            loadingTip={loadingTip} 
+            bgImage={bgImage} 
+            menuBg={menuBg}
+            microEvent={microEvent}
+          />
+        } />
+        
+        <Route path="/play" element={
+          <PlayPage 
         stats={stats} 
+            currentScenario={currentScenario}
+            resultOverlay={resultOverlay}
+            bgImage={bgImage}
+            onBackgroundLoaded={handleBackgroundLoaded}
+            onOptionSelect={(opt) => {
+              const idx = currentScenario?.options.indexOf(opt) ?? 0;
+              handleOptionSelect(opt, idx);
+            }}
         onHomeClick={resetToMenu} 
         onMapClick={() => setShowMap(true)} 
         onSaveClick={saveGame}
-      />
+            onMailboxClick={() => setShowMailbox(true)}
+            onMemoryAlbumClick={() => setShowMemoryAlbum(true)}
+            onDiaryClick={() => setShowDiary(true)}
+          />
+        } />
+        
+        <Route path="/gameover" element={
+          <ResultPage 
+            status={GameStatus.GAMEOVER} 
+            onRestart={() => window.location.reload()} 
+            onBackToMenu={() => navigate('/')} 
+            menuBg={menuBg}
+          />
+        } />
+        
+        <Route path="/victory" element={
+          <ResultPage 
+            status={GameStatus.VICTORY} 
+            onRestart={() => navigate('/')} 
+            onBackToMenu={() => navigate('/')} 
+            menuBg={menuBg}
+          />
+        } />
+      </Routes>
       
+      {/* 全局 Overlays - 跨路由保持显示 */}
       {showMap && (
         <LevelMap 
-          currentSemester={stats.semester} 
+          stats={stats} 
           onClose={() => setShowMap(false)} 
+          onLevelClick={jumpToLevel}
         />
       )}
-
-      {/* Background Image Layer */}
-      <div className="absolute inset-0 z-0">
-        {bgImage && (
-          <img 
-            key={bgImage}
-            src={bgImage} 
-            className="w-full h-full object-cover blur-in transition-opacity duration-1000"
-            alt="Scenario Background"
-          />
-        )}
-        <div className="absolute inset-0 cinematic-gradient"></div>
-      </div>
-
-      {/* Main UI Layer */}
-      <div className="relative z-10 flex-1 flex flex-col justify-end p-6 md:p-12 max-w-5xl mx-auto w-full">
-        {currentScenario && !resultOverlay && (
-          <div className="mb-8 space-y-4 animate-fadeIn">
-            <div className="inline-block bg-white/10 backdrop-blur-md px-4 py-1 rounded-full border border-white/20 mb-2">
-              <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-white/80">
-                Semester {stats.semester} • 困境挑战
-              </span>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-bold serif-font text-white drop-shadow-2xl italic">
-              {currentScenario.title}
-            </h2>
-            <div className="bg-black/50 backdrop-blur-xl border-l-4 border-white p-6 rounded-r-lg max-w-3xl shadow-lg">
-              <p className="text-lg md:text-xl text-gray-100 leading-relaxed font-light">
-                {currentScenario.description}
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-8">
-              {currentScenario.options.map((opt, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleOptionSelect(opt)}
-                  className="p-5 md:p-8 text-left border border-white/20 bg-white/5 hover:bg-white text-white hover:text-black transition-all duration-500 group relative overflow-hidden"
-                >
-                  <div className="absolute top-0 left-0 w-1 h-full bg-white group-hover:bg-black transition-colors"></div>
-                  <span className="block text-[10px] uppercase tracking-widest opacity-40 mb-2 group-hover:text-black/40">选择 {idx + 1}</span>
-                  <span className="text-lg font-medium tracking-tight leading-snug">{opt.text}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {resultOverlay && (
-          <div className="mb-24 animate-bounce-in text-center p-12 bg-black/90 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-            <p className="text-2xl md:text-3xl font-light italic leading-relaxed text-white">
-              “ {resultOverlay} ”
-            </p>
-          </div>
-        )}
-      </div>
-      
-      {/* Cinematic Grain Effect */}
-      <div className="fixed inset-0 pointer-events-none z-40 bg-[url('https://www.transparenttextures.com/patterns/dust.png')] opacity-20 contrast-150"></div>
+      {showSettings && (
+        <SettingsMenu 
+          settings={settings} 
+          onUpdate={updateSettings} 
+          onResetAll={resetAllData}
+          onClose={() => setShowSettings(false)} 
+        />
+      )}
+      {showSocialMap && (
+        <SocialMap 
+          stats={stats} 
+          onInteract={handleSocialInteract}
+          onClose={() => setShowSocialMap(false)} 
+        />
+      )}
+      {activeCrisis && (
+        <CrisisOverlay 
+          event={activeCrisis} 
+          onOptionSelect={handleCrisisDecision} 
+        />
+      )}
+      {showIdentitySelector && (
+        <IdentitySelector 
+          onSelect={handleIdentitySelect} 
+          onBack={() => setShowIdentitySelector(false)} 
+        />
+      )}
+      {showMailbox && (
+        <MailboxModal 
+          letters={stats.mailbox || []} 
+          onClose={() => setShowMailbox(false)} 
+          onRead={markLetterAsRead}
+          onAction={handleLetterAction}
+        />
+      )}
+      {showMemoryAlbum && (
+        <MemoryAlbumModal 
+          images={stats.memoryAlbum || []} 
+          onClose={() => setShowMemoryAlbum(false)} 
+        />
+      )}
+      {showDiary && (
+        <DiaryModal 
+          entries={stats.diary || []} 
+          currentLocation={currentScenario?.title}
+          chapter={stats.chapter}
+          level={stats.level}
+          onSave={handleSaveDiary}
+          onDelete={handleDeleteDiary}
+          onClose={() => setShowDiary(false)} 
+        />
+      )}
+      {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
+      {showConfirmMenu && <ConfirmDialog onConfirm={confirmReset} onCancel={() => setShowConfirmMenu(false)} />}
+      {activeAchievement && (
+        <AchievementToast 
+          achievement={activeAchievement} 
+          onClose={() => setActiveAchievement(null)} 
+        />
+      )}
     </div>
   );
 };
