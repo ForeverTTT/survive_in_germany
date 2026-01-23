@@ -18,6 +18,15 @@ const LevelMap: React.FC<LevelMapProps> = ({ stats, onClose, onLevelClick }) => 
   const dagStages = DAG_STAGES;
   const [selectedHistory, setSelectedHistory] = React.useState<any | null>(null);
 
+  // 禁止 body 滚动
+  React.useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    window.scrollTo(0, 0); // 滚动到顶部
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, []);
+
   // 辅助函数：获取某个关卡的历史记录
   const getHistoryForLevel = (chapterId: number, levelNum: number) => {
     return stats.historyLogs?.find(log => log.chapter === chapterId && log.level === levelNum);
@@ -31,7 +40,23 @@ const LevelMap: React.FC<LevelMapProps> = ({ stats, onClose, onLevelClick }) => 
   const currentStageIdx = dagStages.findIndex(s => s.includes(stats.level));
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/98 backdrop-blur-3xl flex flex-col items-center justify-start p-4 overflow-y-auto animate-fadeIn select-none text-white">
+    <div className="fixed inset-0 z-[100] bg-black/98 backdrop-blur-3xl flex items-center justify-center animate-fadeIn select-none text-white" style={{ top: 0, left: 0 }}>
+      <style>{`
+        .map-scroll::-webkit-scrollbar {
+          width: 8px;
+        }
+        .map-scroll::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05);
+        }
+        .map-scroll::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 10px;
+        }
+        .map-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.4);
+        }
+      `}</style>
+      <div className="w-full h-full overflow-y-auto map-scroll flex flex-col items-center justify-start p-4">
       {/* Header */}
       <div className="w-full max-w-xl flex justify-between items-center mt-4 mb-8 border-b border-white/10 pb-4 shrink-0">
         <h2 className="text-xl md:text-2xl font-black serif-font text-white italic tracking-tighter">
@@ -141,8 +166,8 @@ const LevelMap: React.FC<LevelMapProps> = ({ stats, onClose, onLevelClick }) => 
 
       {/* 历史记录弹窗 (History Replay Card) */}
       {selectedHistory && (
-        <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 animate-fadeIn">
-          <div className="bg-zinc-900 border border-white/10 p-8 max-w-2xl w-full rounded-2xl shadow-2xl space-y-6 relative overflow-hidden">
+        <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 animate-fadeIn" style={{ top: 0, left: 0 }}>
+          <div className="bg-zinc-900 border border-white/10 p-8 max-w-2xl w-full max-h-[90vh] rounded-2xl shadow-2xl space-y-6 relative overflow-y-auto map-scroll">
             <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
             <div className="space-y-2">
               <span className="text-[10px] uppercase tracking-[0.3em] text-green-500 font-bold">历史轨迹 • 第 {selectedHistory.chapter} 章 第 {selectedHistory.level} 关</span>
@@ -180,6 +205,7 @@ const LevelMap: React.FC<LevelMapProps> = ({ stats, onClose, onLevelClick }) => 
 
       <div className="mt-8 mb-12 text-center text-white/10 max-w-md italic text-[8px] tracking-[0.2em] uppercase">
         "毕业不是终点，拿到 Urkunde 才是解脱。"
+      </div>
       </div>
     </div>
   );
