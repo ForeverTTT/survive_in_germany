@@ -10,6 +10,19 @@ interface SettingsMenuProps {
 
 const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdate, onResetAll, onClose }) => {
   const [showConfirmReset, setShowConfirmReset] = React.useState(false);
+  const [isWiping, setIsWiping] = React.useState(false);
+
+  const handleConfirmWipe = async () => {
+    if (isWiping) return;
+    setIsWiping(true);
+    try {
+      await onResetAll();
+      setShowConfirmReset(false);
+      onClose();
+    } finally {
+      setIsWiping(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-6 animate-fadeIn">
@@ -121,14 +134,16 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdate, onReset
             </p>
             <div className="flex flex-col w-full gap-3">
               <button 
-                onClick={onResetAll}
-                className="w-full py-4 bg-red-600 text-white font-black uppercase text-xs tracking-widest hover:bg-red-700 transition-all rounded-xl shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+                onClick={handleConfirmWipe}
+                disabled={isWiping}
+                className="w-full py-4 bg-red-600 text-white font-black uppercase text-xs tracking-widest hover:bg-red-700 transition-all rounded-xl shadow-[0_0_20px_rgba(220,38,38,0.3)] disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                确定抹除 (CONFIRM WIPE)
+                {isWiping ? '正在抹除...' : '确定抹除 (CONFIRM WIPE)'}
               </button>
               <button 
                 onClick={() => setShowConfirmReset(false)}
-                className="w-full py-4 border border-white/20 text-white font-black uppercase text-xs tracking-widest hover:bg-white/5 transition-all rounded-xl"
+                disabled={isWiping}
+                className="w-full py-4 border border-white/20 text-white font-black uppercase text-xs tracking-widest hover:bg-white/5 transition-all rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 点错了，回去 (CANCEL)
               </button>

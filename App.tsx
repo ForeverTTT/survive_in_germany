@@ -8,7 +8,7 @@ import { generateScenarioImage } from './services/geminiService';
 import { IMAGE_STATE_KEY } from './utils/imageState';
 import { pickRandomLocalSceneBg, rollMicroEvent } from './utils/gameLogic';
 import { useGameAudio, useAchievements, useGameSave } from './hooks';
-import { SAVE_KEY, SETTINGS_KEY } from './config/keys';
+import { SAVE_KEY, SETTINGS_KEY, GLOBAL_PROGRESS_KEY, MENU_BG_CACHE_KEY } from './config/keys';
 
 // 通用 UI 组件
 import LevelMap from './components/LevelMap';
@@ -34,6 +34,33 @@ import introBg from './assets/media/images/intro.png';
 
 // 选项结果浮层停留时长（毫秒）：让玩家有时间读完结果
 const RESULT_OVERLAY_DURATION_MS = 7000;
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error?: string }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error: error?.message || 'Unknown error' };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('App ErrorBoundary caught:', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: '100vh', background: '#000', color: '#fff', padding: '24px', fontFamily: 'monospace' }}>
+          <h1 style={{ fontSize: '20px', marginBottom: '12px' }}>App crashed</h1>
+          <p style={{ fontSize: '12px', opacity: 0.7 }}>Error: {this.state.error}</p>
+        </div>
+      );
+    }
+    return this.props.children as React.ReactElement;
+  }
+}
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -399,6 +426,14 @@ const App: React.FC = () => {
         memoryAlbum: [newImage, ...filteredAlbum]
       };
     });
+  };
+
+  const deleteMemoryImage = (id: string) => {
+    setStats(prev => ({
+      ...prev,
+      memoryAlbum: (prev.memoryAlbum || []).filter(img => img.id !== id)
+    }));
+    showToast("照片已删除 (Photo Deleted)");
   };
 
   // 只从“已成功加载过的背景”入相册：由 PlayPage 的 <img onLoad> 触发
@@ -1032,6 +1067,7 @@ const App: React.FC = () => {
           }
         }}
       />
+      <ErrorBoundary>
       <Routes>
         <Route path="/" element={
           <MainMenu 
@@ -1157,7 +1193,24 @@ const App: React.FC = () => {
             menuBg={menuBg}
           />
         } />
+        <Route path="*" element={
+          <MainMenu 
+            onStart={startGame} 
+            onLoad={loadGame} 
+            onMapClick={() => setShowMap(true)}
+            onSocialClick={() => setShowSocialMap(true)}
+            onSettingsClick={() => setShowSettings(true)}
+            onMailboxClick={() => setShowMailbox(true)}
+            onMemoryAlbumClick={() => setShowMemoryAlbum(true)}
+            onDiaryClick={() => setShowDiary(true)}
+            hasSave={hasSave} 
+            menuBg={menuBg} 
+            unlockedAchievements={stats.achievements || []}
+            unreadLetters={stats.mailbox?.filter(l => !l.isRead).length || 0}
+          />
+        } />
       </Routes>
+      </ErrorBoundary>
       
       {/* 全局 Overlays - 跨路由保持显示 */}
       {showMap && (
@@ -1207,6 +1260,7 @@ const App: React.FC = () => {
         <MemoryAlbumModal 
           images={stats.memoryAlbum || []} 
           onClose={() => setShowMemoryAlbum(false)} 
+          onDelete={deleteMemoryImage}
         />
       )}
       {showDiary && (
