@@ -24,12 +24,12 @@ npm run all
 ```
 运行成功后，你会看到类似下面的输出：
 ```
-[0] > node server.js
-[1] > vite
-[0] ✅ Save server running at http://localhost:3001
-[1]   VITE v6.4.1  ready in 510 ms
-[1]   ➜  Local:   http://localhost:3000/
-[1]   ➜  Network: http://192.168.x.x:3000/
+> node server.js
+> vite
+✅ Save server running at http://localhost:3001
+  VITE v6.4.1  ready in 510 ms
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://192.168.x.x:3000/
 ```
 然后打开浏览器访问 `http://localhost:3000/` 或者提供的其他网址就可以开始游戏了！
 
