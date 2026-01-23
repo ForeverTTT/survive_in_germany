@@ -85,8 +85,8 @@ export const generateNextScenario = async (currentStats: GameStats, lastAction: 
 
 export const generateScenarioImage = async (prompt: string): Promise<string> => {
   if (!ai) {
-    console.warn("⚠️ Cannot generate image: API key not configured, using fallback");
-    return 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=1920&q=80';
+    console.warn("⚠️ Cannot generate image: API key not configured");
+    throw new Error("IMAGE_GEN_FAILED: API key not configured");
   }
 
   try {
@@ -119,14 +119,15 @@ export const generateScenarioImage = async (prompt: string): Promise<string> => 
       }
     }
     
-    console.warn("⚠️ 响应中没有图片数据，使用fallback");
-    return 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=1920&q=80';
+    console.warn("⚠️ 响应中没有图片数据");
+    throw new Error("IMAGE_GEN_FAILED: No image data in response");
   } catch (err: any) {
     console.error("❌ 图片生成失败:", err.message);
     console.error("错误详情:", err);
     if (err.message?.includes('quota') || err.message?.includes('429')) {
       console.error("💸 API quota 已用完");
     }
-    return 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=1920&q=80';
+    // 抛出错误让调用方使用本地图片 fallback
+    throw new Error(`IMAGE_GEN_FAILED: ${err.message}`);
   }
 };
