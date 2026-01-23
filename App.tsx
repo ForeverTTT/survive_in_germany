@@ -399,20 +399,61 @@ const App: React.FC = () => {
     }
   }, [location.pathname, menuBg, currentScenario, navigate, isDataLoaded]);
 
-  // 返回主菜单时播放音效
+  // 主菜单音效播放逻辑
   const prevPathRef = React.useRef<string | null>(null);
   const zugausAudioRef = React.useRef<HTMLAudioElement | null>(null);
+  const hasPlayedInitialSfx = React.useRef(false);
+  
+  // 播放 zugaus 音效的函数
+  const playZugausSfx = useCallback(() => {
+    const sfxVolume = settings.sfxVolume ?? settings.volume ?? 80;
+    const audio = new Audio(zugausSfx);
+    audio.volume = (sfxVolume / 100) * 0.5;
+    audio.play().catch(() => {});
+    zugausAudioRef.current = audio;
+  }, [settings.sfxVolume, settings.volume]);
+  
+  // 首次用户交互时播放 BGM 和 zugaus
   useEffect(() => {
-    // 只有从其他页面进入主菜单时才播放（不是初始加载）
-    if (location.pathname === '/' && prevPathRef.current && prevPathRef.current !== '/') {
-      const sfxVolume = settings.sfxVolume ?? settings.volume ?? 80;
-      const audio = new Audio(zugausSfx);
-      audio.volume = (sfxVolume / 100) * 0.5;
-      audio.play().catch(() => {});
-      zugausAudioRef.current = audio;
+    if (location.pathname !== '/') return;
+    
+    const playInitialAudio = () => {
+      // 播放 BGM
+      startMusic();
+      // 播放 zugaus
+      if (!hasPlayedInitialSfx.current) {
+        playZugausSfx();
+        hasPlayedInitialSfx.current = true;
+      }
+      // 移除监听
+      document.removeEventListener('click', playInitialAudio);
+      document.removeEventListener('keydown', playInitialAudio);
+      document.removeEventListener('touchstart', playInitialAudio);
+    };
+    
+    if (!hasPlayedInitialSfx.current) {
+      document.addEventListener('click', playInitialAudio);
+      document.addEventListener('keydown', playInitialAudio);
+      document.addEventListener('touchstart', playInitialAudio);
+    }
+    
+    return () => {
+      document.removeEventListener('click', playInitialAudio);
+      document.removeEventListener('keydown', playInitialAudio);
+      document.removeEventListener('touchstart', playInitialAudio);
+    };
+  }, [location.pathname, startMusic, playZugausSfx]);
+  
+  // 从其他页面返回主菜单时播放 zugaus
+  useEffect(() => {
+    const isEnteringHome = location.pathname === '/';
+    const isReturningHome = prevPathRef.current && prevPathRef.current !== '/' && isEnteringHome;
+    
+    if (isReturningHome) {
+      playZugausSfx();
     }
     prevPathRef.current = location.pathname;
-  }, [location.pathname, settings.sfxVolume, settings.volume]);
+  }, [location.pathname, playZugausSfx]);
 
   // 信箱逻辑
   const markLetterAsRead = (id: string) => {
@@ -1247,6 +1288,7 @@ const App: React.FC = () => {
         ref={audioRef} 
         src={localBgm} 
         loop 
+        autoPlay
         preload="auto"
         onCanPlay={() => {
           startMusic();
