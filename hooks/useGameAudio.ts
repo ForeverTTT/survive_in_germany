@@ -1,16 +1,20 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { GameSettings } from '../data/types';
-import { BGM_URL, CLICK_SFX_URL } from '../config/constants';
+import { CLICK_SFX_URL } from '../config/constants';
 
 export const useGameAudio = (settings: GameSettings) => {
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // 兼容旧存档：如果没有新字段，使用旧的 volume 或默认值
+  const musicVolume = settings.musicVolume ?? settings.volume ?? 60;
+  const sfxVolume = settings.sfxVolume ?? settings.volume ?? 80;
+
   // 播放音效
   const playSfx = useCallback((url: string) => {
     const audio = new Audio(url);
-    audio.volume = (settings.volume / 100) * 0.5;
+    audio.volume = (sfxVolume / 100) * 0.5;
     audio.play().catch(() => {});
-  }, [settings.volume]);
+  }, [sfxVolume]);
 
   // 全局点击音效监听
   useEffect(() => {
@@ -24,12 +28,12 @@ export const useGameAudio = (settings: GameSettings) => {
     return () => document.removeEventListener('click', handleGlobalClick);
   }, [playSfx]);
 
-  // 监听音量变化
+  // 监听音乐音量变化
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = settings.volume / 100;
+      audioRef.current.volume = musicVolume / 100;
     }
-  }, [settings.volume]);
+  }, [musicVolume]);
 
   // 音乐解锁逻辑
   const startMusic = useCallback(() => {

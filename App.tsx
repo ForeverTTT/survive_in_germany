@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { GameStats, Scenario, GameStatus, GameOption, HistoryEntry, GameSettings, Achievement, Identity, Letter, MemoryImage, CrisisEvent, DiaryEntry } from './data/types';
-import { INITIAL_STATS, START_SCENARIO, LOADING_TIPS, LOADING_MESSAGES, DAG_STAGES, DEFAULT_SETTINGS, BGM_URL, ACHIEVEMENTS, CLICK_SFX_URL, SUCCESS_SFX_URL, LETTER_TEMPLATES, INITIAL_NPCS, CRISIS_EVENTS } from './config/constants';
+import { INITIAL_STATS, START_SCENARIO, LOADING_TIPS, LOADING_MESSAGES, DAG_STAGES, DEFAULT_SETTINGS, ACHIEVEMENTS, CLICK_SFX_URL, SUCCESS_SFX_URL, LETTER_TEMPLATES, INITIAL_NPCS, CRISIS_EVENTS } from './config/constants';
 import { getScenarioByChapterLevel, getNextScenario, ALL_SCENARIOS, getScenarioById } from './data/scenariosDatabase';
 import { generateScenarioImage } from './services/geminiService';
 import { IMAGE_STATE_KEY } from './utils/imageState';
@@ -31,6 +31,9 @@ import ResultPage from './pages/Result/ResultPage';
 
 // 首页主题图
 import introBg from './assets/media/images/intro.png';
+
+// 本地 BGM
+import localBgm from './assets/media/audios/bgm.mp3';
 
 // 选项结果浮层停留时长（毫秒）：让玩家有时间读完结果
 const RESULT_OVERLAY_DURATION_MS = 7000;
@@ -1051,20 +1054,11 @@ const App: React.FC = () => {
     <div className="relative">
       <audio 
         ref={audioRef} 
-        src={BGM_URL} 
+        src={localBgm} 
         loop 
         preload="auto"
         onCanPlay={() => {
           startMusic();
-        }}
-        onError={(e) => {
-          console.warn("Remote Audio Load Error, trying local fallback:", e);
-          if (audioRef.current && audioRef.current.src !== window.location.origin + "/bgm.mp3") {
-            audioRef.current.src = "/bgm.mp3";
-            audioRef.current.load();
-          } else {
-            showToast("背景音乐加载失败，请检查网络 (Audio Load Error)");
-          }
         }}
       />
       <ErrorBoundary>

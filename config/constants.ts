@@ -161,7 +161,8 @@ export const ACHIEVEMENTS: Achievement[] = [
 
 export const DEFAULT_SETTINGS: GameSettings = {
   textSpeed: 2,
-  volume: 80,
+  musicVolume: 60,
+  sfxVolume: 80,
   showEffects: true,
   useLLM: true
 };

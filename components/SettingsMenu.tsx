@@ -56,28 +56,70 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdate, onReset
             </div>
           </div>
 
-          {/* 音量 */}
+          {/* 背景音乐音量 */}
           <div className="space-y-3">
             <div className="flex justify-between items-end">
-              <label className="text-xs uppercase tracking-widest text-white/60 font-bold">主音量</label>
-              <span className="text-[10px] text-white/40 font-mono">{settings.volume}%</span>
+              <label className="text-xs uppercase tracking-widest text-white/60 font-bold flex items-center gap-2">
+                <span>🎵</span> 背景音乐
+              </label>
+              <span className="text-sm text-white font-bold font-mono">{settings.musicVolume ?? 60}%</span>
+            </div>
+            {/* 音量可视化条 */}
+            <div className="relative h-3 bg-white/10 rounded-full overflow-hidden">
+              <div 
+                className="absolute inset-y-0 left-0 bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-100"
+                style={{ width: `${settings.musicVolume ?? 60}%` }}
+              />
             </div>
             <input 
               type="range" 
               min="0" max="100" 
-              value={settings.volume} 
-              onChange={(e) => onUpdate({ ...settings, volume: parseInt(e.target.value) })}
-              className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-white"
-            />
-            <button 
-              onClick={() => {
+              value={settings.musicVolume ?? 60} 
+              onChange={(e) => {
+                const newVolume = parseInt(e.target.value);
                 const audio = document.querySelector('audio');
-                if (audio) audio.play();
+                if (audio) {
+                  audio.volume = newVolume / 100;
+                  // 如果音乐没在播放，自动播放以便听到变化
+                  if (audio.paused) {
+                    audio.play().catch(() => {});
+                  }
+                }
+                onUpdate({ ...settings, musicVolume: newVolume });
               }}
-              className="text-[8px] uppercase text-green-500/50 hover:text-green-500 transition-colors tracking-widest"
-            >
-              点击测试并激活音频 (Test & Activate)
-            </button>
+              className="w-full h-2 bg-transparent rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
+            />
+          </div>
+
+          {/* 音效音量 */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-end">
+              <label className="text-xs uppercase tracking-widest text-white/60 font-bold flex items-center gap-2">
+                <span>🔊</span> 音效
+              </label>
+              <span className="text-sm text-white font-bold font-mono">{settings.sfxVolume ?? 80}%</span>
+            </div>
+            {/* 音量可视化条 */}
+            <div className="relative h-3 bg-white/10 rounded-full overflow-hidden">
+              <div 
+                className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-100"
+                style={{ width: `${settings.sfxVolume ?? 80}%` }}
+              />
+            </div>
+            <input 
+              type="range" 
+              min="0" max="100" 
+              value={settings.sfxVolume ?? 80} 
+              onChange={(e) => {
+                const newVolume = parseInt(e.target.value);
+                onUpdate({ ...settings, sfxVolume: newVolume });
+                // 拖动时播放测试音效
+                const sfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+                sfx.volume = (newVolume / 100) * 0.5;
+                sfx.play().catch(() => {});
+              }}
+              className="w-full h-2 bg-transparent rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
+            />
           </div>
 
           {/* 开关选项 */}

@@ -11,7 +11,9 @@ export interface HistoryEntry {
 
 export interface GameSettings {
   textSpeed: number; // 1-3
-  volume: number;    // 0-100
+  volume?: number;   // 0-100 (deprecated, for backward compatibility)
+  musicVolume: number; // 0-100 背景音乐音量
+  sfxVolume: number;   // 0-100 音效音量
   showEffects: boolean;
   useLLM: boolean;
 }
