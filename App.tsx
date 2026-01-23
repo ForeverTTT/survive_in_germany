@@ -38,6 +38,50 @@ import localBgm from './assets/media/audios/bgm.mp3';
 // 返回主菜单音效
 import zugausSfx from './assets/media/audios/zugaus.mp3';
 
+// 开场视频
+import introVideo from './assets/media/videos/start.mp4';
+
+// 故事介绍背景图
+import storyIntroBg from './assets/media/images/bg_1.png';
+
+// 打字机文字组件
+const TypewriterText: React.FC<{ 
+  text: string; 
+  delay?: number; 
+  speed?: number;
+  className?: string; 
+  onComplete?: () => void 
+}> = ({ text, delay = 0, speed = 25, className = '', onComplete }) => {
+  const [displayed, setDisplayed] = React.useState('');
+  const [started, setStarted] = React.useState(false);
+  const [completed, setCompleted] = React.useState(false);
+  
+  React.useEffect(() => {
+    const startTimeout = setTimeout(() => setStarted(true), delay);
+    return () => clearTimeout(startTimeout);
+  }, [delay]);
+  
+  React.useEffect(() => {
+    if (!started) return;
+    if (displayed.length < text.length) {
+      const timeout = setTimeout(() => {
+        setDisplayed(text.slice(0, displayed.length + 1));
+      }, speed);
+      return () => clearTimeout(timeout);
+    } else if (!completed) {
+      setCompleted(true);
+      onComplete?.();
+    }
+  }, [displayed, started, text, speed, onComplete, completed]);
+  
+  return (
+    <span className={className}>
+      {displayed}
+      {!completed && started && <span className="animate-pulse text-green-400 ml-0.5">▊</span>}
+    </span>
+  );
+};
+
 // 选项结果浮层停留时长（毫秒）：让玩家有时间读完结果
 const RESULT_OVERLAY_DURATION_MS = 7000;
 
@@ -114,6 +158,9 @@ const App: React.FC = () => {
   const [microEvent, setMicroEvent] = useState<{ text: string; statImpact: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [showConfirmMenu, setShowConfirmMenu] = useState<boolean>(false);
+  const [showIntroVideo, setShowIntroVideo] = useState<boolean>(false);
+  const [showStoryIntro, setShowStoryIntro] = useState<boolean>(false);
+  const [pendingIdentity, setPendingIdentity] = useState<Identity | null>(null);
 
   // Toast 提示函数（需要在 hooks 之前定义）
   const showToast = useCallback((message: string) => {
@@ -354,6 +401,7 @@ const App: React.FC = () => {
 
   // 返回主菜单时播放音效
   const prevPathRef = React.useRef<string | null>(null);
+  const zugausAudioRef = React.useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
     // 只有从其他页面进入主菜单时才播放（不是初始加载）
     if (location.pathname === '/' && prevPathRef.current && prevPathRef.current !== '/') {
@@ -361,6 +409,7 @@ const App: React.FC = () => {
       const audio = new Audio(zugausSfx);
       audio.volume = (sfxVolume / 100) * 0.5;
       audio.play().catch(() => {});
+      zugausAudioRef.current = audio;
     }
     prevPathRef.current = location.pathname;
   }, [location.pathname, settings.sfxVolume, settings.volume]);
@@ -581,7 +630,18 @@ const App: React.FC = () => {
   // 身份选择逻辑
   const handleIdentitySelect = (identity: Identity) => {
     setShowIdentitySelector(false);
-    startGameWithIdentity(identity);
+    // 暂停背景音乐
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    // 停止 zugaus 音效
+    if (zugausAudioRef.current) {
+      zugausAudioRef.current.pause();
+      zugausAudioRef.current = null;
+    }
+    // 先播放开场视频，视频结束后再开始游戏
+    setPendingIdentity(identity);
+    setShowIntroVideo(true);
   };
 
   const startGameWithIdentity = async (identity: Identity) => {
@@ -1072,6 +1132,110 @@ const App: React.FC = () => {
           >
             跳过同步 (Skip Sync)
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 开场视频（选择身份后、正式开始游戏前播放）
+  if (showIntroVideo && pendingIdentity) {
+    return (
+      <div className="fixed inset-0 z-[200] bg-black flex items-center justify-center">
+        <video
+          autoPlay
+          playsInline
+          className="w-full h-full object-contain"
+          onEnded={() => {
+            setShowIntroVideo(false);
+            setShowStoryIntro(true);
+          }}
+          onError={() => {
+            // 视频加载失败时跳过，显示背景介绍
+            setShowIntroVideo(false);
+            setShowStoryIntro(true);
+          }}
+        >
+          <source src={introVideo} type="video/mp4" />
+        </video>
+        {/* 跳过按钮 */}
+        <button
+          onClick={() => {
+            setShowIntroVideo(false);
+            setShowStoryIntro(true);
+          }}
+          className="absolute bottom-8 right-8 px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-sm uppercase tracking-widest rounded-lg backdrop-blur-sm transition-all"
+        >
+          跳过 (Skip)
+        </button>
+      </div>
+    );
+  }
+
+  // 游戏背景介绍（视频结束后显示）
+  if (showStoryIntro && pendingIdentity) {
+    const identityName = pendingIdentity.name;
+    return (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-8 animate-fadeIn overflow-hidden">
+        {/* 背景图片 */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center scale-105"
+          style={{ backgroundImage: `url(${storyIntroBg})` }}
+        />
+        {/* 暗色遮罩 */}
+        <div className="absolute inset-0 bg-black/60" />
+        {/* 渐变叠加 */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
+        
+        <div className="relative max-w-2xl w-full space-y-8 text-center">
+          {/* 标题 */}
+          <div className="space-y-2">
+            <p className="text-[10px] uppercase tracking-[0.5em] text-white/40">Your Story Begins</p>
+            <h1 className="text-4xl md:text-5xl font-black text-white serif-font italic">
+              Willkommen zu Deutschland
+            </h1>
+          </div>
+
+          {/* 背景故事 */}
+          <div className="space-y-6 text-left bg-black/50 border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
+            <p className="text-white/80 leading-relaxed text-lg">
+              你是一名刚刚抵达德国的<span className="text-green-400 font-bold">{identityName}</span>，
+              带着对未来的憧憬和一箱子泡面，踏上了这片土地。
+            </p>
+            <p className="text-white/70 leading-relaxed">
+              在这里，你将面对：<br/>
+              <span className="text-yellow-400">🏛️ 令人抓狂的官僚体系</span> — Anmeldung、签证、保险，一个都不能少<br/>
+              <span className="text-blue-400">📚 硬核的学业压力</span> — 挂科？延毕？每一个选择都关乎命运<br/>
+              <span className="text-red-400">💶 紧巴巴的经济状况</span> — 房租、Semesterbeitrag、还有那该死的 Rundfunkbeitrag<br/>
+              <span className="text-purple-400">🧠 摇摇欲坠的精神状态</span> — 孤独、焦虑、文化冲击
+            </p>
+            <p className="text-white/60 leading-relaxed italic">
+              你的目标：在这里活下去，拿到学位，保住理智。<br/>
+              记住，每一个决定都可能改变你的命运。
+            </p>
+          </div>
+
+          {/* 身份信息 */}
+          <div className="bg-black/40 border border-white/20 rounded-xl px-8 py-4 inline-block backdrop-blur-sm">
+            <p className="text-[10px] uppercase tracking-widest text-white/50 mb-1">你的身份</p>
+            <p className="text-xl font-bold text-white">{pendingIdentity.name}</p>
+            <p className="text-sm text-white/60">{pendingIdentity.description}</p>
+          </div>
+
+          {/* 开始按钮 */}
+          <button
+            onClick={() => {
+              setShowStoryIntro(false);
+              startGameWithIdentity(pendingIdentity);
+              setPendingIdentity(null);
+            }}
+            className="px-12 py-4 bg-white text-black font-black uppercase text-sm tracking-[0.3em] rounded-xl hover:bg-green-500 hover:text-white transition-all transform hover:scale-105 shadow-2xl"
+          >
+            开始模拟生存 (Begin)
+          </button>
+
+          <p className="text-[10px] text-white/30 uppercase tracking-widest">
+            Viel Erfolg, du wirst es brauchen.
+          </p>
         </div>
       </div>
     );

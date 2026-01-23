@@ -1,8 +1,8 @@
 {
   "stats": {
-    "ects": 10,
-    "money": 4500,
-    "sanity": 100,
+    "ects": 0,
+    "money": 3000,
+    "sanity": 120,
     "semester": 1,
     "chapter": 1,
     "level": 1,
@@ -10,7 +10,7 @@
       "1-1"
     ],
     "historyLogs": [],
-    "rngSeed": "d0bo7",
+    "rngSeed": "gr4yks",
     "tags": [],
     "achievements": [],
     "delayCount": 0,
@@ -64,36 +64,99 @@
     ],
     "mailbox": [
       {
-        "id": "welcome_letter_1769143372767",
+        "id": "welcome_letter_1769145585253",
         "title": "欢迎来到德国！",
         "sender": "德国驻华大使馆",
         "content": "恭喜你获得了留学签证！你的留德生活正式开启。\n\n记住，在德国，信箱 (Briefkasten) 是非常重要的。你会收到来自政府、银行、保险公司甚至邻居的各种信件。请务必养成每天检查信箱的习惯，并确保你的名字贴在信箱上，否则你可能会错过重要的账单或通知。",
         "type": "info",
-        "timestamp": 1769143372767,
+        "timestamp": 1769145585253,
         "isRead": false
       },
       {
-        "id": "welcome_letter_1769143184581",
+        "id": "welcome_letter_1769145502989",
         "title": "欢迎来到德国！",
         "sender": "德国驻华大使馆",
         "content": "恭喜你获得了留学签证！你的留德生活正式开启。\n\n记住，在德国，信箱 (Briefkasten) 是非常重要的。你会收到来自政府、银行、保险公司甚至邻居的各种信件。请务必养成每天检查信箱的习惯，并确保你的名字贴在信箱上，否则你可能会错过重要的账单或通知。",
         "type": "info",
-        "timestamp": 1769143184581,
+        "timestamp": 1769145502989,
+        "isRead": false
+      },
+      {
+        "id": "welcome_letter_1769145482673",
+        "title": "欢迎来到德国！",
+        "sender": "德国驻华大使馆",
+        "content": "恭喜你获得了留学签证！你的留德生活正式开启。\n\n记住，在德国，信箱 (Briefkasten) 是非常重要的。你会收到来自政府、银行、保险公司甚至邻居的各种信件。请务必养成每天检查信箱的习惯，并确保你的名字贴在信箱上，否则你可能会错过重要的账单或通知。",
+        "type": "info",
+        "timestamp": 1769145482673,
+        "isRead": false
+      },
+      {
+        "id": "welcome_letter_1769145420646",
+        "title": "欢迎来到德国！",
+        "sender": "德国驻华大使馆",
+        "content": "恭喜你获得了留学签证！你的留德生活正式开启。\n\n记住，在德国，信箱 (Briefkasten) 是非常重要的。你会收到来自政府、银行、保险公司甚至邻居的各种信件。请务必养成每天检查信箱的习惯，并确保你的名字贴在信箱上，否则你可能会错过重要的账单或通知。",
+        "type": "info",
+        "timestamp": 1769145420646,
+        "isRead": false
+      },
+      {
+        "id": "welcome_letter_1769145354601",
+        "title": "欢迎来到德国！",
+        "sender": "德国驻华大使馆",
+        "content": "恭喜你获得了留学签证！你的留德生活正式开启。\n\n记住，在德国，信箱 (Briefkasten) 是非常重要的。你会收到来自政府、银行、保险公司甚至邻居的各种信件。请务必养成每天检查信箱的习惯，并确保你的名字贴在信箱上，否则你可能会错过重要的账单或通知。",
+        "type": "info",
+        "timestamp": 1769145354601,
+        "isRead": false
+      },
+      {
+        "id": "welcome_letter_1769144804926",
+        "title": "欢迎来到德国！",
+        "sender": "德国驻华大使馆",
+        "content": "恭喜你获得了留学签证！你的留德生活正式开启。\n\n记住，在德国，信箱 (Briefkasten) 是非常重要的。你会收到来自政府、银行、保险公司甚至邻居的各种信件。请务必养成每天检查信箱的习惯，并确保你的名字贴在信箱上，否则你可能会错过重要的账单或通知。",
+        "type": "info",
+        "timestamp": 1769144804926,
+        "isRead": false
+      },
+      {
+        "id": "welcome_letter_1769144743710",
+        "title": "欢迎来到德国！",
+        "sender": "德国驻华大使馆",
+        "content": "恭喜你获得了留学签证！你的留德生活正式开启。\n\n记住，在德国，信箱 (Briefkasten) 是非常重要的。你会收到来自政府、银行、保险公司甚至邻居的各种信件。请务必养成每天检查信箱的习惯，并确保你的名字贴在信箱上，否则你可能会错过重要的账单或通知。",
+        "type": "info",
+        "timestamp": 1769144743710,
+        "isRead": false
+      },
+      {
+        "id": "welcome_letter_1769144498008",
+        "title": "欢迎来到德国！",
+        "sender": "德国驻华大使馆",
+        "content": "恭喜你获得了留学签证！你的留德生活正式开启。\n\n记住，在德国，信箱 (Briefkasten) 是非常重要的。你会收到来自政府、银行、保险公司甚至邻居的各种信件。请务必养成每天检查信箱的习惯，并确保你的名字贴在信箱上，否则你可能会错过重要的账单或通知。",
+        "type": "info",
+        "timestamp": 1769144498008,
+        "isRead": false
+      },
+      {
+        "id": "welcome_letter_1769144377774",
+        "title": "欢迎来到德国！",
+        "sender": "德国驻华大使馆",
+        "content": "恭喜你获得了留学签证！你的留德生活正式开启。\n\n记住，在德国，信箱 (Briefkasten) 是非常重要的。你会收到来自政府、银行、保险公司甚至邻居的各种信件。请务必养成每天检查信箱的习惯，并确保你的名字贴在信箱上，否则你可能会错过重要的账单或通知。",
+        "type": "info",
+        "timestamp": 1769144377774,
         "isRead": false
       }
     ],
     "memoryAlbum": [
       {
-        "id": "img_1769143192626",
-        "url": "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=1920&q=80",
+        "id": "img_1769145593269",
+        "url": "/assets/media/images/intro.png",
         "title": "法兰克福机场的冷风",
         "chapter": 1,
         "level": 1,
-        "timestamp": 1769143192626
+        "timestamp": 1769145593269
       }
     ],
     "diary": [],
-    "identity": "tum_slave"
+    "identity": "arts_soul"
   },
   "currentScenario": {
     "id": "1-1",
@@ -129,5 +192,5 @@
     "showEffects": true,
     "useLLM": true
   },
-  "timestamp": 1769143398346
+  "timestamp": 1769145593271
 }
