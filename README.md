@@ -12,7 +12,7 @@
 ## 🛠️ 紧急落地指南 (快速开始)
 
 ### 1. 登机准备 (环境安装)
-你需要 Node.js 环境。在终端执行：
+你需要首先打开命令行, Node.js 环境。在终端执行：
 ```bash
 npm install
 ```
@@ -22,7 +22,16 @@ npm install
 ```bash
 npm run all
 ```
-根据控制台里面的输出提示开始运行游戏吧！
+运行成功后，你会看到类似下面的输出：
+```
+[0] > node server.js
+[1] > vite
+[0] ✅ Save server running at http://localhost:3001
+[1]   VITE v6.4.1  ready in 510 ms
+[1]   ➜  Local:   http://localhost:3000/
+[1]   ➜  Network: http://192.168.x.x:3000/
+```
+然后打开浏览器访问 `http://localhost:3000/` 就可以开始游戏了！
 
 ---
 
