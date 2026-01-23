@@ -684,10 +684,9 @@ const App: React.FC = () => {
       ...INITIAL_STATS,
       ...identity.initialStats,
       identity: identity.id,
-      // 新开局：信箱/相册跟随本局进度，从头开始
-      mailbox: [welcomeLetter],
-      memoryAlbum: [],
-      // 日记仍保留（可跨局）
+      // 跨局保留：相册、邮件、日记
+      mailbox: [welcomeLetter, ...(stats.mailbox || [])],
+      memoryAlbum: stats.memoryAlbum || [],
       diary: stats.diary || [],
       achievements: stats.achievements || []
     };
@@ -723,6 +722,9 @@ const App: React.FC = () => {
   };
 
   const startGame = () => {
+    // 清除存档，确保"继续模拟"按钮不显示
+    localStorage.removeItem(SAVE_KEY);
+    setHasSave(false);
     setShowIdentitySelector(true);
   };
 
@@ -730,46 +732,112 @@ const App: React.FC = () => {
     const npc = stats.npcs.find(n => n.id === npcId);
     if (!npc || npc.isLocked) return;
 
-    if (type === 'party' && stats.money < 50) {
-      showToast("钱包空空如也，连一瓶最便宜的 Oettinger 都买不起，还是别去 Party 丢人了...");
-      return;
-    }
-    if (type === 'study' && stats.sanity < 10) {
-      showToast("你的精神状态已经濒临崩溃，盯着课本看了一分钟，发现自己连标题的德语单词都不认识了...");
-      return;
+    let moneyChange = 0;
+    let sanityChange = 0;
+    let ectsChange = 0;
+    let favorChange = 0;
+    let successMsg = "";
+
+    const favorBonus = 1 + npc.favorability / 100;
+
+    // 根据不同 NPC 定制交互逻辑
+    if (npcId === 'hausmeister_klaus') {
+      // 宿管大叔：用精神换钱
+      if (stats.sanity < 30) {
+        showToast("你已经累得连扳手都拿不动了，大叔摇了摇头让你先去休息...");
+        return;
+      }
+      sanityChange = -30;
+      moneyChange = Math.floor(150 * favorBonus);
+      successMsg = `你帮 Klaus 大叔修好了整栋楼的暖气，他塞给你 ${moneyChange} 欧劳务费。`;
+    } else if (npcId === 'flatmate_clara') {
+      // 室友 Clara：常规社交
+      if (type === 'party') {
+        if (stats.money < 40) {
+          showToast("钱包空空如也，连一瓶最便宜的 Oettinger 都买不起...");
+          return;
+        }
+        moneyChange = -40;
+        sanityChange = Math.floor(20 * favorBonus);
+        favorChange = 10;
+        successMsg = "Party 上的音乐震耳欲聋，酒精让你暂时忘记了下周的考试。";
+      } else {
+        if (stats.sanity < 15) {
+          showToast("你的精神已经恍惚，连德语和意大利语都分不清了...");
+          return;
+        }
+        sanityChange = -15;
+        favorChange = 5;
+        successMsg = "通过语言交换，你学会了用德语和意大利语同时吐槽教授。";
+      }
+    } else if (npcId === 'prof_schmidt') {
+      // Schmidt 教授：用精神换学分
+      if (type === 'study') {
+        if (stats.sanity < 40) {
+          showToast("你盯着复杂的公式，感觉它们在屏幕上跳舞，教授让你回家睡觉...");
+          return;
+        }
+        sanityChange = -40;
+        ectsChange = Math.floor(2 * favorBonus);
+        favorChange = 2;
+        successMsg = `你在实验室熬了一整晚，教授对你的研究成果非常满意，给了你 ${ectsChange} 学分。`;
+      } else {
+        if (stats.money < 100) {
+          showToast("摸了摸口袋，发现连请教授喝杯咖啡的钱都不够...");
+          return;
+        }
+        moneyChange = -100;
+        favorChange = 15;
+        successMsg = "教授对你请的中餐赞不绝口，甚至开始向你打听正宗宫保鸡丁的做法。";
+      }
+    } else if (npcId === 'senior_l') {
+      // L 学长：低成本换学分/精神
+      if (type === 'study') {
+        if (stats.sanity < 20) {
+          showToast("你已经困得睁不开眼，学长拍了拍你的肩膀让你先睡会儿...");
+          return;
+        }
+        sanityChange = -20;
+        ectsChange = Math.floor(5 * favorBonus);
+        favorChange = 5;
+        successMsg = `学长把珍藏多年的“期末必过宝典”传授给了你，学分 +${ectsChange}！`;
+      } else {
+        if (stats.money < 20) {
+          showToast("连买两杯啤酒的钱都没有，学长叹了口气...");
+          return;
+        }
+        moneyChange = -20;
+        sanityChange = Math.floor(10 * favorBonus);
+        favorChange = 8;
+        successMsg = "在啤酒花园，学长告诉你：'其实大家都是这么挂过来的'，你瞬间释怀了。";
+      }
+    } else if (npcId === 'auslaenderbehoerde_frau_muller') {
+      // 签证官：纯刷好感
+      if (stats.sanity < 50) {
+        showToast("你面对签证官时紧张得说不出话，她皱着眉头让你下次再来...");
+        return;
+      }
+      sanityChange = -50;
+      favorChange = Math.floor(10 * favorBonus);
+      successMsg = "你准备了极其完美的材料，Müller 女士的脸色竟然缓和了一点点。";
     }
 
     const newNpcs = stats.npcs.map(n => {
       if (n.id === npcId) {
-        const newFavor = Math.min(100, n.favorability + (type === 'party' ? 10 : 5));
-        return { ...n, favorability: newFavor };
+        return { ...n, favorability: Math.min(100, n.favorability + favorChange) };
       }
       return n;
     });
 
     setStats(prev => ({
       ...prev,
-      money: Number((prev.money + (type === 'party' ? -50 : 0)).toFixed(2)),
-      sanity: Math.max(0, Math.min(100, prev.sanity + (type === 'party' ? 15 : -10))),
+      money: Number((prev.money + moneyChange).toFixed(2)),
+      sanity: Math.max(0, Math.min(100, prev.sanity + sanityChange)),
+      ects: prev.ects + ectsChange,
       npcs: newNpcs
     }));
 
-    const partyMsgs = [
-      "Party 上的音乐震耳欲聋，你虽然听不懂他们在聊什么，但跟着点头就对了！好感度+10",
-      "你带了一包超市买的薯片，竟然成了 Party 上的抢手货。好感度+10",
-      "在酒精和音乐的加持下，你的德语口语水平瞬间提升到了 C2（自以为）。好感度+10"
-    ];
-    const studyMsgs = [
-      "共同学习了两小时，你们最后花了一个半小时讨论哪家 Döner 最好吃。好感度+5",
-      "虽然课本没看进去多少，但你们交换了彼此的吐槽，革命友谊升华了。好感度+5",
-      "你成功向对方解释了一个复杂的概念，对方露出了崇拜（或者是困惑）的眼神。好感度+5"
-    ];
-
-    const msg = type === 'party' 
-      ? partyMsgs[Math.floor(Math.random() * partyMsgs.length)]
-      : studyMsgs[Math.floor(Math.random() * studyMsgs.length)];
-    
-    showToast(msg);
+    showToast(successMsg);
   };
 
   const handleCrisisDecision = (impact: any, result: string) => {
@@ -1158,8 +1226,38 @@ const App: React.FC = () => {
         <Route path="/gameover" element={
           <ResultPage 
             status={GameStatus.GAMEOVER} 
-            onRestart={() => window.location.reload()} 
-            onBackToMenu={() => navigate('/')} 
+            onRestart={() => {
+              // 保留记忆相册、邮件、日记（跨局保留）
+              const preservedAlbum = stats.memoryAlbum || [];
+              const preservedMailbox = stats.mailbox || [];
+              const preservedDiary = stats.diary || [];
+              
+              // 清除存档
+              localStorage.removeItem(SAVE_KEY);
+              setHasSave(false);
+              
+              // 重置状态但保留跨局数据
+              setStats({
+                ...INITIAL_STATS,
+                memoryAlbum: preservedAlbum,
+                mailbox: preservedMailbox,
+                diary: preservedDiary
+              });
+              setCurrentScenario(null);
+              setBgImage('');
+              setResultOverlay(null);
+              
+              // 直接打开身份选择器，开始新游戏
+              navigate('/');
+              setTimeout(() => setShowIdentitySelector(true), 100);
+            }} 
+            onBackToMenu={() => {
+              // 清除存档，回到主界面
+              localStorage.removeItem(SAVE_KEY);
+              setHasSave(false);
+              setResultOverlay(null);
+              navigate('/');
+            }} 
             menuBg={menuBg}
           />
         } />
@@ -1167,8 +1265,38 @@ const App: React.FC = () => {
         <Route path="/victory" element={
           <ResultPage 
             status={GameStatus.VICTORY} 
-            onRestart={() => navigate('/')} 
-            onBackToMenu={() => navigate('/')} 
+            onRestart={() => {
+              // 保留记忆相册、邮件、日记（跨局保留）
+              const preservedAlbum = stats.memoryAlbum || [];
+              const preservedMailbox = stats.mailbox || [];
+              const preservedDiary = stats.diary || [];
+              
+              // 清除存档
+              localStorage.removeItem(SAVE_KEY);
+              setHasSave(false);
+              
+              // 重置状态但保留跨局数据
+              setStats({
+                ...INITIAL_STATS,
+                memoryAlbum: preservedAlbum,
+                mailbox: preservedMailbox,
+                diary: preservedDiary
+              });
+              setCurrentScenario(null);
+              setBgImage('');
+              setResultOverlay(null);
+              
+              // 直接打开身份选择器，开始新游戏
+              navigate('/');
+              setTimeout(() => setShowIdentitySelector(true), 100);
+            }} 
+            onBackToMenu={() => {
+              // 清除存档，回到主界面
+              localStorage.removeItem(SAVE_KEY);
+              setHasSave(false);
+              setResultOverlay(null);
+              navigate('/');
+            }} 
             menuBg={menuBg}
           />
         } />

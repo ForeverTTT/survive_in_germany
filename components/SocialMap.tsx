@@ -175,32 +175,130 @@ const SocialMap: React.FC<SocialMapProps> = ({ stats, onInteract, onClose }) => 
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 pt-4">
-                  <button 
-                    onClick={() => onInteract(selectedNpc.id, 'party')}
-                    disabled={stats.money < 50}
-                    className={`group relative p-4 bg-purple-500/10 hover:bg-purple-600 text-left transition-all duration-500 border border-purple-500/20 rounded-xl overflow-hidden ${stats.money < 50 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <div className="relative z-10 flex justify-between items-center">
-                      <div>
-                        <span className="block text-[8px] uppercase font-black text-purple-400 group-hover:text-purple-200 mb-1">WG Party</span>
-                        <span className="text-sm font-bold text-white group-hover:text-black">邀请参加聚会</span>
+                  {selectedNpc.id === 'hausmeister_klaus' && (
+                    <button 
+                      onClick={() => onInteract(selectedNpc.id, 'party')}
+                      disabled={stats.money < 30}
+                      className={`group relative p-4 bg-orange-500/10 hover:bg-orange-600 text-left transition-all duration-500 border border-orange-500/20 rounded-xl overflow-hidden ${stats.money < 30 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <div className="relative z-10 flex justify-between items-center">
+                        <div>
+                          <span className="block text-[8px] uppercase font-black text-orange-400 group-hover:text-orange-200 mb-1">Help with Repairs</span>
+                          <span className="text-sm font-bold text-white group-hover:text-black">帮大叔修暖气</span>
+                        </div>
+                        <span className={`text-xs font-black group-hover:text-black ${stats.money < 30 ? 'text-red-500' : ''}`}>-30 Sanity / +{Math.floor(150 * (1 + selectedNpc.favorability/100))}€</span>
                       </div>
-                      <span className={`text-xs font-black group-hover:text-black ${stats.money < 50 ? 'text-red-500' : ''}`}>-50€ / +15 Sanity</span>
-                    </div>
-                  </button>
-                  <button 
-                    onClick={() => onInteract(selectedNpc.id, 'study')}
-                    disabled={stats.sanity < 10}
-                    className={`group relative p-4 bg-blue-500/10 hover:bg-blue-600 text-left transition-all duration-500 border border-blue-500/20 rounded-xl overflow-hidden ${stats.sanity < 10 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <div className="relative z-10 flex justify-between items-center">
-                      <div>
-                        <span className="block text-[8px] uppercase font-black text-blue-400 group-hover:text-blue-200 mb-1">Study Session</span>
-                        <span className="text-sm font-bold text-white group-hover:text-black">共同学习讨论</span>
+                    </button>
+                  )}
+
+                  {selectedNpc.id === 'flatmate_clara' && (
+                    <>
+                      <button 
+                        onClick={() => onInteract(selectedNpc.id, 'party')}
+                        disabled={stats.money < 40}
+                        className={`group relative p-4 bg-purple-500/10 hover:bg-purple-600 text-left transition-all duration-500 border border-purple-500/20 rounded-xl overflow-hidden ${stats.money < 40 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <div className="relative z-10 flex justify-between items-center">
+                          <div>
+                            <span className="block text-[8px] uppercase font-black text-purple-400 group-hover:text-purple-200 mb-1">WG Party</span>
+                            <span className="text-sm font-bold text-white group-hover:text-black">邀请参加聚会</span>
+                          </div>
+                          <span className={`text-xs font-black group-hover:text-black ${stats.money < 40 ? 'text-red-500' : ''}`}>-40€ / +{Math.floor(20 * (1 + selectedNpc.favorability/100))} Sanity</span>
+                        </div>
+                      </button>
+                      <button 
+                        onClick={() => onInteract(selectedNpc.id, 'study')}
+                        disabled={stats.sanity < 15}
+                        className={`group relative p-4 bg-blue-500/10 hover:bg-blue-600 text-left transition-all duration-500 border border-blue-500/20 rounded-xl overflow-hidden ${stats.sanity < 15 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <div className="relative z-10 flex justify-between items-center">
+                          <div>
+                            <span className="block text-[8px] uppercase font-black text-blue-400 group-hover:text-blue-200 mb-1">Language Exchange</span>
+                            <span className="text-sm font-bold text-white group-hover:text-black">德意语言交换</span>
+                          </div>
+                          <span className={`text-xs font-black group-hover:text-black ${stats.sanity < 15 ? 'text-red-500' : ''}`}>-15 Sanity / +5 Favor</span>
+                        </div>
+                      </button>
+                    </>
+                  )}
+
+                  {selectedNpc.id === 'prof_schmidt' && (
+                    <>
+                      <button 
+                        onClick={() => onInteract(selectedNpc.id, 'study')}
+                        disabled={stats.sanity < 40}
+                        className={`group relative p-4 bg-emerald-500/10 hover:bg-emerald-600 text-left transition-all duration-500 border border-emerald-500/20 rounded-xl overflow-hidden ${stats.sanity < 40 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <div className="relative z-10 flex justify-between items-center">
+                          <div>
+                            <span className="block text-[8px] uppercase font-black text-emerald-400 group-hover:text-emerald-200 mb-1">Research Assistant</span>
+                            <span className="text-sm font-bold text-white group-hover:text-black">申请助研岗位</span>
+                          </div>
+                          <span className={`text-xs font-black group-hover:text-black ${stats.sanity < 40 ? 'text-red-500' : ''}`}>-40 Sanity / +{Math.floor(2 * (1 + selectedNpc.favorability/100))} ECTS</span>
+                        </div>
+                      </button>
+                      <button 
+                        onClick={() => onInteract(selectedNpc.id, 'party')}
+                        disabled={stats.money < 100}
+                        className={`group relative p-4 bg-amber-500/10 hover:bg-amber-600 text-left transition-all duration-500 border border-amber-500/20 rounded-xl overflow-hidden ${stats.money < 100 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <div className="relative z-10 flex justify-between items-center">
+                          <div>
+                            <span className="block text-[8px] uppercase font-black text-amber-400 group-hover:text-amber-200 mb-1">Academic Dinner</span>
+                            <span className="text-sm font-bold text-white group-hover:text-black">请教授吃中餐</span>
+                          </div>
+                          <span className={`text-xs font-black group-hover:text-black ${stats.money < 100 ? 'text-red-500' : ''}`}>-100€ / +15 Favor</span>
+                        </div>
+                      </button>
+                    </>
+                  )}
+
+                  {selectedNpc.id === 'senior_l' && (
+                    <>
+                      <button 
+                        onClick={() => onInteract(selectedNpc.id, 'study')}
+                        disabled={stats.sanity < 20}
+                        className={`group relative p-4 bg-indigo-500/10 hover:bg-indigo-600 text-left transition-all duration-500 border border-indigo-500/20 rounded-xl overflow-hidden ${stats.sanity < 20 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <div className="relative z-10 flex justify-between items-center">
+                          <div>
+                            <span className="block text-[8px] uppercase font-black text-indigo-400 group-hover:text-indigo-200 mb-1">Exam Tips</span>
+                            <span className="text-sm font-bold text-white group-hover:text-black">讨要考试真题</span>
+                          </div>
+                          <span className={`text-xs font-black group-hover:text-black ${stats.sanity < 20 ? 'text-red-500' : ''}`}>-20 Sanity / +{Math.floor(5 * (1 + selectedNpc.favorability/100))} ECTS</span>
+                        </div>
+                      </button>
+                      <button 
+                        onClick={() => onInteract(selectedNpc.id, 'party')}
+                        disabled={stats.money < 20}
+                        className={`group relative p-4 bg-rose-500/10 hover:bg-rose-600 text-left transition-all duration-500 border border-rose-500/20 rounded-xl overflow-hidden ${stats.money < 20 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <div className="relative z-10 flex justify-between items-center">
+                          <div>
+                            <span className="block text-[8px] uppercase font-black text-rose-400 group-hover:text-rose-200 mb-1">Beer Garden</span>
+                            <span className="text-sm font-bold text-white group-hover:text-black">去啤酒花园吐槽</span>
+                          </div>
+                          <span className={`text-xs font-black group-hover:text-black ${stats.money < 20 ? 'text-red-500' : ''}`}>-20€ / +{Math.floor(10 * (1 + selectedNpc.favorability/100))} Sanity</span>
+                        </div>
+                      </button>
+                    </>
+                  )}
+
+                  {selectedNpc.id === 'auslaenderbehoerde_frau_muller' && (
+                    <button 
+                      onClick={() => onInteract(selectedNpc.id, 'study')}
+                      disabled={stats.sanity < 50}
+                      className={`group relative p-4 bg-slate-500/10 hover:bg-slate-600 text-left transition-all duration-500 border border-slate-500/20 rounded-xl overflow-hidden ${stats.sanity < 50 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <div className="relative z-10 flex justify-between items-center">
+                        <div>
+                          <span className="block text-[8px] uppercase font-black text-slate-400 group-hover:text-slate-200 mb-1">Visa Extension</span>
+                          <span className="text-sm font-bold text-white group-hover:text-black">卑微延签</span>
+                        </div>
+                        <span className={`text-xs font-black group-hover:text-black ${stats.sanity < 50 ? 'text-red-500' : ''}`}>-50 Sanity / +{Math.floor(10 * (1 + selectedNpc.favorability/100))} Favor</span>
                       </div>
-                      <span className={`text-xs font-black group-hover:text-black ${stats.sanity < 10 ? 'text-red-500' : ''}`}>-10 Sanity / +5 Favor</span>
-                    </div>
-                  </button>
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -221,14 +319,6 @@ const SocialMap: React.FC<SocialMapProps> = ({ stats, onInteract, onClose }) => 
           </button>
         </div>
       </div>
-
-      {/* Close button in top right as a secondary option */}
-      <button 
-        onClick={onClose} 
-        className="fixed top-8 right-8 p-4 text-white hover:text-white transition-all duration-300 bg-white/20 hover:bg-white/40 border-2 border-white/30 rounded-full backdrop-blur-xl shadow-2xl group"
-      >
-        <svg className="group-hover:rotate-90 transition-transform" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
     </div>
   );
 };
