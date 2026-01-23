@@ -35,6 +35,20 @@ const MainMenu: React.FC<MainMenuProps> = ({
   unreadLetters = 0
 }) => {
   const [showAchievements, setShowAchievements] = React.useState(false);
+  const [showConfirmNewGame, setShowConfirmNewGame] = React.useState(false);
+
+  const handleStartClick = () => {
+    if (hasSave) {
+      setShowConfirmNewGame(true);
+    } else {
+      onStart();
+    }
+  };
+
+  const handleConfirmNewGame = () => {
+    setShowConfirmNewGame(false);
+    onStart();
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-black p-4 relative overflow-hidden">
@@ -97,7 +111,7 @@ const MainMenu: React.FC<MainMenuProps> = ({
         <div className="flex flex-col gap-6 items-center justify-center w-full max-w-4xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
             <button 
-              onClick={onStart}
+              onClick={handleStartClick}
               className="group relative px-12 py-6 border border-white text-white transition-all duration-500 overflow-hidden backdrop-blur-sm"
             >
               <div className="absolute inset-0 bg-white translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
@@ -158,6 +172,51 @@ const MainMenu: React.FC<MainMenuProps> = ({
           unlockedIds={unlockedAchievements} 
           onClose={() => setShowAchievements(false)} 
         />
+      )}
+
+      {/* 确认新游戏对话框 */}
+      {showConfirmNewGame && (
+        <div className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 animate-fadeIn">
+          <div className="bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950 border border-white/10 p-8 max-w-md w-full rounded-3xl shadow-2xl space-y-6 relative">
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-red-500 via-orange-500 to-yellow-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]"></div>
+            
+            <div className="space-y-3 relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow-lg">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-black text-white tracking-tight">确认开始新游戏</h3>
+              </div>
+              <p className="text-[10px] uppercase tracking-[0.3em] text-red-400 font-bold">WARNING • 警告</p>
+            </div>
+            
+            <div className="relative z-10 p-5 bg-white/5 rounded-2xl border border-white/10">
+              <p className="text-gray-300 leading-relaxed text-base">
+                开始新游戏将会<span className="text-red-400 font-bold">清除当前所有的游戏进度</span>。你确定要开始新的模拟吗？
+              </p>
+              <p className="text-gray-400 text-sm mt-3 italic">
+                注意：记忆相册、邮件和日记不会被清除。
+              </p>
+            </div>
+            
+            <div className="flex gap-4 pt-2 relative z-10">
+              <button 
+                onClick={() => setShowConfirmNewGame(false)}
+                className="flex-1 py-4 border-2 border-white/20 text-white hover:bg-white/10 hover:border-white/40 transition-all duration-300 uppercase text-xs font-bold tracking-widest rounded-xl backdrop-blur-sm"
+              >
+                取消
+              </button>
+              <button 
+                onClick={handleConfirmNewGame}
+                className="flex-1 py-4 bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-400 hover:to-orange-500 text-white transition-all duration-300 uppercase text-xs font-bold tracking-widest rounded-xl shadow-[0_0_30px_rgba(239,68,68,0.3)] hover:shadow-[0_0_40px_rgba(239,68,68,0.5)]"
+              >
+                确认开始
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
