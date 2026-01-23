@@ -31,7 +31,7 @@ npm run all
 [1]   ➜  Local:   http://localhost:3000/
 [1]   ➜  Network: http://192.168.x.x:3000/
 ```
-然后打开浏览器访问 `http://localhost:3000/` 就可以开始游戏了！
+然后打开浏览器访问 `http://localhost:3000/` 或者提供的其他网址就可以开始游戏了！
 
 ---
 
