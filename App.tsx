@@ -35,6 +35,9 @@ import introBg from './assets/media/images/intro.png';
 // 本地 BGM
 import localBgm from './assets/media/audios/bgm.mp3';
 
+// 返回主菜单音效
+import zugausSfx from './assets/media/audios/zugaus.mp3';
+
 // 选项结果浮层停留时长（毫秒）：让玩家有时间读完结果
 const RESULT_OVERLAY_DURATION_MS = 7000;
 
@@ -75,7 +78,18 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<GameSettings>(() => {
     try {
       const saved = localStorage.getItem(SETTINGS_KEY);
-      return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // 合并默认值，确保新字段存在（兼容旧存档）
+        return {
+          ...DEFAULT_SETTINGS,
+          ...parsed,
+          // 如果旧存档只有 volume，迁移到新字段
+          musicVolume: parsed.musicVolume ?? parsed.volume ?? DEFAULT_SETTINGS.musicVolume,
+          sfxVolume: parsed.sfxVolume ?? parsed.volume ?? DEFAULT_SETTINGS.sfxVolume,
+        };
+      }
+      return DEFAULT_SETTINGS;
     } catch (err) {
       console.warn("Settings cache corrupted, reset to defaults.", err);
       try {
@@ -337,6 +351,19 @@ const App: React.FC = () => {
       navigate('/');
     }
   }, [location.pathname, menuBg, currentScenario, navigate, isDataLoaded]);
+
+  // 返回主菜单时播放音效
+  const prevPathRef = React.useRef<string | null>(null);
+  useEffect(() => {
+    // 只有从其他页面进入主菜单时才播放（不是初始加载）
+    if (location.pathname === '/' && prevPathRef.current && prevPathRef.current !== '/') {
+      const sfxVolume = settings.sfxVolume ?? settings.volume ?? 80;
+      const audio = new Audio(zugausSfx);
+      audio.volume = (sfxVolume / 100) * 0.5;
+      audio.play().catch(() => {});
+    }
+    prevPathRef.current = location.pathname;
+  }, [location.pathname, settings.sfxVolume, settings.volume]);
 
   // 信箱逻辑
   const markLetterAsRead = (id: string) => {
