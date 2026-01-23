@@ -1203,10 +1203,10 @@ const App: React.FC = () => {
             </p>
             <p className="text-white/70 leading-relaxed">
               在这里，你将面对：<br/>
-              <span className="text-yellow-400">🏛️ 令人抓狂的官僚体系</span> — Anmeldung、签证、保险，一个都不能少<br/>
-              <span className="text-blue-400">📚 硬核的学业压力</span> — 挂科？延毕？每一个选择都关乎命运<br/>
-              <span className="text-red-400">💶 紧巴巴的经济状况</span> — 房租、Semesterbeitrag、还有那该死的 Rundfunkbeitrag<br/>
-              <span className="text-purple-400">🧠 摇摇欲坠的精神状态</span> — 孤独、焦虑、文化冲击
+              <span className="text-yellow-400">🏛️ 令人抓狂的官僚体系</span> — Anmeldung、签证、保险，还有十年不会回邮件的外管局<br/>
+              <span className="text-blue-400">📚 硬核的学业压力</span> — 挂科？延毕？转专业？每一个选择都关乎命运<br/>
+              <span className="text-red-400">💶 紧巴巴的经济状况</span> — 房租、Semesterbeitrag、飞涨的物价、还有那该死的电视费<br/>
+              <span className="text-purple-400">🧠 摇摇欲坠的精神状态</span> — 孤独、焦虑、文化冲击、连续2星期的阴天、为考试熬夜
             </p>
             <p className="text-white/60 leading-relaxed italic">
               你的目标：在这里活下去，拿到学位，保住理智。<br/>
