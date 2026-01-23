@@ -1,6 +1,6 @@
 import React from 'react';
-import { Achievement } from '../types';
-import { ACHIEVEMENTS } from '../constants';
+import { Achievement } from '../data/types';
+import { ACHIEVEMENTS } from '../config/constants';
 
 interface AchievementListProps {
   unlockedIds: string[];

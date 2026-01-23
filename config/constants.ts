@@ -1,5 +1,5 @@
 
-import { GameStats, Scenario, GameSettings, Identity, Achievement, NPC, CrisisEvent } from './types';
+import { GameStats, Scenario, GameSettings, Identity, Achievement, NPC, CrisisEvent } from '../data/types';
 
 export const INITIAL_NPCS: NPC[] = [
   {

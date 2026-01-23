@@ -1,6 +1,6 @@
 
 import React from 'react';
-import introBg from '../../image/intro.png';
+import introBg from '../../assets/media/images/intro.png';
 
 interface GameLoaderProps {
   loadingMsg: string;
@@ -11,15 +11,24 @@ interface GameLoaderProps {
 }
 
 const GameLoader: React.FC<GameLoaderProps> = ({ loadingMsg, loadingTip, bgImage, menuBg, microEvent }) => {
+  // 背景图最终判定：强制使用 introBg (DB火车雪地场景)
+  const finalBg = introBg;
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-4 relative overflow-hidden">
       {/* Loading Background - 优先使用德国主题背景 */}
       <div className="absolute inset-0 z-0">
         <img 
-          src={menuBg || bgImage || introBg} 
+          src={finalBg} 
           className="w-full h-full object-cover blur-sm opacity-50 scale-105"
           alt="Loading Background"
+          onError={(e) => {
+            console.error('Loading background failed:', finalBg);
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
         />
+        {/* 占位背景：如果图片加载失败或不存在，显示渐变背景 */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 -z-10"></div>
         <div className="absolute inset-0 cinematic-gradient"></div>
       </div>
 

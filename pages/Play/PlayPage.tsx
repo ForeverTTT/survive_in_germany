@@ -1,16 +1,19 @@
 
 import React, { useState, useEffect, useLayoutEffect } from 'react';
-import { GameStats, Scenario, GameOption } from '../../types';
+import { GameStats, Scenario, GameOption } from '../../data/types';
 import StatBar from './StatBar';
 import TypewriterText from '../../components/TypewriterText';
 import { readImageState, writeImageState, preloadImage, type ImageState } from '../../utils/imageState';
 
-// description 背景图素材池：自动收集本地 image/ 下的所有 png（含 intro.png、de-survival-* 等）
+// description 背景图素材池：自动收集本地 assets/media/images/ 下的所有 png
 const LOCAL_DESCRIPTION_BG_POOL: string[] = Object.values(
-  import.meta.glob('../../image/*.png', { eager: true, import: 'default' })
+  import.meta.glob('../../assets/media/images/*.png', { eager: true, import: 'default' })
 ) as string[];
 
-// 只使用本地 image/ 里的图片做随机背景（不混入任何网图）
+// 调试：看看池子里到底有没有东西
+console.log('PlayPage LOCAL_DESCRIPTION_BG_POOL:', LOCAL_DESCRIPTION_BG_POOL);
+
+// 只使用本地图片做随机背景（不混入任何网图）
 const DESCRIPTION_BG_POOL = [...LOCAL_DESCRIPTION_BG_POOL].filter(Boolean);
 
 interface PlayPageProps {

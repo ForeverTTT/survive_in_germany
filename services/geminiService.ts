@@ -1,7 +1,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { GameStats, Scenario } from "../types";
-import { SYSTEM_INSTRUCTION } from "../constants";
+import { GameStats, Scenario } from "../data/types";
+import { SYSTEM_INSTRUCTION } from "../config/constants";
 
 // 获取 API Key（Vite 环境变量）
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';

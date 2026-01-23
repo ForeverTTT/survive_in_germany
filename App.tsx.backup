@@ -8,7 +8,6 @@ import { generateScenarioImage } from './services/geminiService';
 import { IMAGE_STATE_KEY } from './utils/imageState';
 import { pickRandomLocalSceneBg, rollMicroEvent } from './utils/gameLogic';
 import { useGameAudio, useAchievements, useGameSave } from './hooks';
-import { SAVE_KEY, SETTINGS_KEY } from './config/keys';
 
 // 通用 UI 组件
 import LevelMap from './components/LevelMap';
@@ -32,6 +31,7 @@ import ResultPage from './pages/Result/ResultPage';
 // 首页主题图
 import introBg from './assets/media/images/intro.png';
 
+const SETTINGS_KEY = 'de_survival_simulator_settings_v1';
 // 选项结果浮层停留时长（毫秒）：让玩家有时间读完结果
 const RESULT_OVERLAY_DURATION_MS = 7000;
 
@@ -71,12 +71,6 @@ const App: React.FC = () => {
   const [toast, setToast] = useState<string | null>(null);
   const [showConfirmMenu, setShowConfirmMenu] = useState<boolean>(false);
 
-  // Toast 提示函数（需要在 hooks 之前定义）
-  const showToast = useCallback((message: string) => {
-    setToast(message);
-    setTimeout(() => setToast(null), 3000);
-  }, []);
-
   // 使用自定义 hooks
   const { audioRef, playSfx, startMusic } = useGameAudio(settings);
   const { 
@@ -107,12 +101,18 @@ const App: React.FC = () => {
     autoSave(stats, currentScenario, bgImage, globalAchievements, settings);
   }, [stats, currentScenario, bgImage, globalAchievements, settings, autoSave]);
 
+  // Toast 提示函数
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 3000);
+  };
+
   // 保存设置到本地
-  const updateSettings = useCallback((newSettings: GameSettings) => {
+  const updateSettings = (newSettings: GameSettings) => {
     setSettings(newSettings);
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
     showToast("设置已应用 (Settings Applied)");
-  }, [showToast]);
+  };
 
   // 🚨 终极保护：5秒后强制解除黑屏（即使 useEffect 没执行）
   useEffect(() => {
@@ -284,13 +284,10 @@ const App: React.FC = () => {
   useEffect(() => {
     // 首页背景：使用本地 intro.png（并且把旧默认图的缓存替换掉）
     const OLD_DEFAULT_MENU_BG = 'https://images.unsplash.com/photo-1546726747-0411da142385?w=1920&q=80';
-    const isOldLocalPath = menuBg && (menuBg.includes('/image/') || menuBg.includes('undefined'));
-    
     const shouldReplace =
       !menuBg ||
       menuBg === OLD_DEFAULT_MENU_BG ||
-      menuBg.includes('images.unsplash.com/photo-1546726747-0411da142385') ||
-      isOldLocalPath;
+      menuBg.includes('images.unsplash.com/photo-1546726747-0411da142385');
 
     if (shouldReplace) {
       setMenuBg(introBg);
@@ -316,20 +313,12 @@ const App: React.FC = () => {
     }));
   };
 
-  const deleteLetter = (id: string) => {
-    setStats(prev => ({
-      ...prev,
-      mailbox: prev.mailbox.filter(l => l.id !== id)
-    }));
-    showToast("信件已删除 (Letter Deleted)");
-  };
-
   const handleLetterAction = (letter: Letter) => {
     if (!letter.action) return;
     const { impact, result } = letter.action;
     setStats(prev => ({
       ...prev,
-      money: Number((prev.money + (impact.money || 0)).toFixed(2)),
+      money: prev.money + (impact.money || 0),
       sanity: Math.max(0, Math.min(100, prev.sanity + (impact.sanity || 0))),
       // 动作执行后移除该动作，标记为已处理
       mailbox: prev.mailbox.map(l => l.id === letter.id ? { ...l, action: undefined } : l)
@@ -463,7 +452,7 @@ const App: React.FC = () => {
     } catch (e) {
       showToast("保存失败：存储空间已满。");
     }
-  }, [stats, currentScenario, bgImage, showToast]);
+  }, [stats, currentScenario, bgImage]);
 
   const loadGame = useCallback(() => {
     startMusic();
@@ -511,7 +500,7 @@ const App: React.FC = () => {
     } catch (e) {
       showToast("存档文件损坏");
     }
-  }, [navigate, currentScenario, startMusic, showToast]);
+  }, [navigate, currentScenario]);
 
   // 身份选择逻辑
   const handleIdentitySelect = (identity: Identity) => {
@@ -523,9 +512,9 @@ const App: React.FC = () => {
     startMusic();
     setLoadingMsg(`正在为 ${identity.name} 办理居留许可...`);
     
-    // 初始化时加入第一封信：欢迎信（每封信都有唯一ID）
+    // 初始化时加入第一封信：欢迎信
     const welcomeLetter = {
-      id: `welcome_letter_${Date.now()}`,
+      id: 'welcome_letter',
       title: '欢迎来到德国！',
       sender: '德国驻华大使馆',
       content: '恭喜你获得了留学签证！你的留德生活正式开启。\n\n记住，在德国，信箱 (Briefkasten) 是非常重要的。你会收到来自政府、银行、保险公司甚至邻居的各种信件。请务必养成每天检查信箱的习惯，并确保你的名字贴在信箱上，否则你可能会错过重要的账单或通知。',
@@ -1200,7 +1189,6 @@ const App: React.FC = () => {
           onClose={() => setShowMailbox(false)} 
           onRead={markLetterAsRead}
           onAction={handleLetterAction}
-          onDelete={deleteLetter}
         />
       )}
       {showMemoryAlbum && (

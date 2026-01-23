@@ -1,5 +1,5 @@
 import React from 'react';
-import { MemoryImage } from '../types';
+import { MemoryImage } from '../data/types';
 
 interface MemoryAlbumModalProps {
   images: MemoryImage[];

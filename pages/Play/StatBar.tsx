@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { GameStats, StatChangeFeedback } from '../../types';
-import { IDENTITIES } from '../../constants';
+import { GameStats, StatChangeFeedback } from '../../data/types';
+import { IDENTITIES } from '../../config/constants';
 
 interface StatBarProps {
   stats: GameStats;

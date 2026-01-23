@@ -1,10 +1,10 @@
 
 import React from 'react';
-import { CHAPTER_DATA, DAG_STAGES } from '../constants';
+import { CHAPTER_DATA, DAG_STAGES } from '../config/constants';
 
-// 从 image 文件夹随机选择背景图
+// 从 assets/media/images 文件夹随机选择背景图
 const LOCAL_SCENE_BG_POOL: string[] = Object.values(
-  import.meta.glob('../image/*.png', { eager: true, import: 'default' })
+  import.meta.glob('../assets/media/images/*.png', { eager: true, import: 'default' })
 ) as string[];
 
 const pickRandomBg = () => {

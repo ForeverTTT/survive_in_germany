@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GameStats, NPC } from '../types';
+import { GameStats, NPC } from '../data/types';
 
 interface SocialMapProps {
   stats: GameStats;

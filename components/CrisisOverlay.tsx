@@ -1,5 +1,5 @@
 import React from 'react';
-import { CrisisEvent } from '../types';
+import { CrisisEvent } from '../data/types';
 
 interface CrisisOverlayProps {
   event: CrisisEvent;

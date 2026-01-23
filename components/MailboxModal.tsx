@@ -1,18 +1,22 @@
 import React from 'react';
-import { Letter } from '../types';
+import { Letter } from '../data/types';
 
 interface MailboxModalProps {
   letters: Letter[];
   onClose: () => void;
   onRead: (id: string) => void;
   onAction: (letter: Letter) => void;
+  onDelete: (id: string) => void;
 }
 
-const MailboxModal: React.FC<MailboxModalProps> = ({ letters, onClose, onRead, onAction }) => {
+const MailboxModal: React.FC<MailboxModalProps> = ({ letters, onClose, onRead, onAction, onDelete }) => {
   const [selectedLetter, setSelectedLetter] = React.useState<Letter | null>(null);
+  const [selectedLetterKey, setSelectedLetterKey] = React.useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = React.useState<{ key: string; letter: Letter } | null>(null);
 
-  const handleSelect = (letter: Letter) => {
+  const handleSelect = (letter: Letter, key: string) => {
     setSelectedLetter(letter);
+    setSelectedLetterKey(key);
     if (!letter.isRead) {
       onRead(letter.id);
     }
@@ -59,39 +63,89 @@ const MailboxModal: React.FC<MailboxModalProps> = ({ letters, onClose, onRead, o
                 目前没有任何信件
               </div>
             ) : (
-              letters.sort((a, b) => b.timestamp - a.timestamp).map((letter) => (
-                <div 
-                  key={letter.id}
-                  onClick={() => handleSelect(letter)}
-                  className={`p-4 border-b border-slate-800 cursor-pointer transition-all hover:bg-slate-800 ${
-                    selectedLetter?.id === letter.id ? 'bg-slate-800 border-l-4 border-l-blue-500' : ''
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <span className={`text-xs px-1.5 py-0.5 rounded ${
-                      letter.type === 'bill' ? 'bg-red-900/50 text-red-300' : 
-                      letter.type === 'action' ? 'bg-blue-900/50 text-blue-300' : 
-                      'bg-slate-700 text-slate-300'
-                    }`}>
-                      {letter.type === 'bill' ? '账单' : letter.type === 'action' ? '互动' : '通知'}
-                    </span>
-                    {!letter.isRead && (
-                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                    )}
-                  </div>
-                  <h3 className={`font-medium truncate ${letter.isRead ? 'text-slate-400' : 'text-slate-100'}`}>
-                    {letter.title}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1">
-                    来自: {letter.sender}
-                  </p>
-                </div>
-              ))
+              letters
+                .sort((a, b) => b.timestamp - a.timestamp)
+                .map((letter, index) => {
+                  const entryKey = `${letter.id}-${letter.timestamp}-${letter.sender}-${index}`;
+                  return (
+                    <div
+                      key={entryKey}
+                      onClick={() => handleSelect(letter, entryKey)}
+                      className={`relative p-4 border-b border-slate-800 cursor-pointer transition-all hover:bg-slate-800 ${
+                        selectedLetterKey === entryKey ? 'bg-slate-800 border-l-4 border-l-blue-500' : ''
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                          letter.type === 'bill' ? 'bg-red-900/50 text-red-300' : 
+                          letter.type === 'action' ? 'bg-blue-900/50 text-blue-300' : 
+                          'bg-slate-700 text-slate-300'
+                        }`}>
+                          {letter.type === 'bill' ? '账单' : letter.type === 'action' ? '互动' : '通知'}
+                        </span>
+                      </div>
+                      <h3 className={`font-medium truncate ${letter.isRead ? 'text-slate-400' : 'text-slate-100'}`}>
+                        {letter.title}
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-1">
+                        来自: {letter.sender}
+                      </p>
+                      <div className="mt-6 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setPendingDelete({ key: entryKey, letter });
+                          }}
+                          className="text-xs uppercase tracking-[0.3em] text-red-400 hover:text-white transition-colors"
+                          title="删除信件"
+                        >
+                          删除
+                        </button>
+                      </div>
+                      {!letter.isRead && (
+                        <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-blue-500 rounded-full border border-white/40 shadow-[0_0_15px_rgba(37,99,235,0.7)]"></span>
+                      )}
+                    </div>
+                  );
+                })
             )}
           </div>
 
           {/* Letter Content */}
           <div className="flex-1 overflow-y-auto p-8 bg-white/5 mailbox-scroll">
+            {pendingDelete && (
+              <div className="mb-6 rounded-2xl border border-red-700/70 bg-red-900/20 px-4 py-3 text-sm space-y-2">
+                <div className="flex flex-col gap-2">
+                  <p className="text-red-100">
+                    确认删除 “{pendingDelete.letter.title}” 吗？该操作不可撤销。
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onDelete(pendingDelete.letter.id);
+                        if (pendingDelete.key === selectedLetterKey) {
+                          setSelectedLetter(null);
+                          setSelectedLetterKey(null);
+                        }
+                        setPendingDelete(null);
+                      }}
+                      className="flex-1 rounded-lg bg-red-600 hover:bg-red-500 py-2 text-xs uppercase tracking-[0.4em] text-white transition-colors"
+                    >
+                      确认删除
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPendingDelete(null)}
+                      className="flex-1 rounded-lg border border-red-600 text-red-200 hover:border-red-400 hover:text-white py-2 text-xs uppercase tracking-[0.4em] transition-colors"
+                    >
+                      取消
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {selectedLetter ? (
               <div className="max-w-2xl mx-auto">
                 <div className="mb-8 border-b border-slate-700 pb-4">
@@ -123,7 +177,7 @@ const MailboxModal: React.FC<MailboxModalProps> = ({ letters, onClose, onRead, o
                   </div>
                 )}
                 
-                <div className="mt-12 text-center text-slate-500 italic text-sm border-t border-slate-800 pt-4">
+                <div className="mt-8 text-center text-slate-500 italic text-sm border-t border-slate-800 pt-4">
                   - 完 -
                 </div>
               </div>

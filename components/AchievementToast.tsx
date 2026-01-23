@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Achievement } from '../types';
+import { Achievement } from '../data/types';
 
 interface AchievementToastProps {
   achievement: Achievement;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DiaryEntry } from '../types';
+import { DiaryEntry } from '../data/types';
 
 interface DiaryModalProps {
   entries: DiaryEntry[];

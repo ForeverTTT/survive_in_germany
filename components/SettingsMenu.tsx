@@ -1,5 +1,5 @@
 import React from 'react';
-import { GameSettings } from '../types';
+import { GameSettings } from '../data/types';
 
 interface SettingsMenuProps {
   settings: GameSettings;

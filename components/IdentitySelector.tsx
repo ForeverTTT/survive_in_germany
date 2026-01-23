@@ -1,6 +1,6 @@
 import React from 'react';
-import { Identity } from '../types';
-import { IDENTITIES } from '../constants';
+import { Identity } from '../data/types';
+import { IDENTITIES } from '../config/constants';
 
 interface IdentitySelectorProps {
   onSelect: (identity: Identity) => void;

@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { GameStatus } from '../../types';
-import introBg from '../../image/intro.png';
+import { GameStatus } from '../../data/types';
+import introBg from '../../assets/media/images/intro.png';
 
 import AchievementList from '../../components/AchievementList';
 
@@ -37,6 +37,12 @@ const MainMenu: React.FC<MainMenuProps> = ({
   const [showAchievements, setShowAchievements] = React.useState(false);
   const [showConfirmNewGame, setShowConfirmNewGame] = React.useState(false);
 
+  // 调试信息
+  React.useEffect(() => {
+    console.log('MainMenu introBg import value:', introBg);
+    console.log('MainMenu menuBg prop value:', menuBg);
+  }, [menuBg]);
+
   const handleStartClick = () => {
     if (hasSave) {
       setShowConfirmNewGame(true);
@@ -49,6 +55,9 @@ const MainMenu: React.FC<MainMenuProps> = ({
     setShowConfirmNewGame(false);
     onStart();
   };
+
+  // 背景图最终判定：主页强制使用 introBg
+  const finalBg = introBg;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-black p-4 relative overflow-hidden">
@@ -92,14 +101,21 @@ const MainMenu: React.FC<MainMenuProps> = ({
         </button>
       </div>
 
-      {/* ... background remains same ... */}
-      <div className="absolute inset-0 opacity-60">
+      {/* Background Image */}
+      <div className="absolute inset-0">
         <img 
-          src={menuBg || introBg} 
-          className={`w-full h-full object-cover transition-opacity duration-2000 ${menuBg ? 'opacity-100' : 'opacity-60'}`} 
+          src={finalBg} 
+          className="w-full h-full object-cover" 
           alt="Menu Background"
+          onError={(e) => {
+            console.error('Final background image failed to load:', finalBg);
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
         />
+        {/* 占位背景：仅在图片确实无法加载时作为底层显示 */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 -z-10"></div>
       </div>
+      <div className="absolute inset-0 bg-black/40"></div>
       <div className="absolute inset-0 cinematic-gradient"></div>
       <div className="z-10 text-center max-w-2xl px-4">
         <h1 className="text-5xl md:text-8xl serif-font font-bold mb-6 italic text-white drop-shadow-2xl">

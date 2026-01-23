@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { GameStatus } from '../../types';
-import introBg from '../../image/intro.png';
+import { GameStatus } from '../../data/types';
+import introBg from '../../assets/media/images/intro.png';
 
 interface ResultPageProps {
   status: GameStatus;
@@ -13,15 +13,24 @@ interface ResultPageProps {
 const ResultPage: React.FC<ResultPageProps> = ({ status, onRestart, onBackToMenu, menuBg }) => {
   const isVictory = status === GameStatus.VICTORY;
   
+  // 背景图最终判定：强制使用 introBg (DB火车雪地场景)
+  const finalBg = introBg;
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-4 text-center relative overflow-hidden">
       {/* 德国留学主题背景 */}
       <div className="absolute inset-0 opacity-40">
         <img 
-          src={menuBg || introBg} 
+          src={finalBg} 
           className="w-full h-full object-cover"
           alt="Background"
+          onError={(e) => {
+            console.error('Result background failed:', finalBg);
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
         />
+        {/* 占位背景 */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 -z-10"></div>
       </div>
       <div className="absolute inset-0 cinematic-gradient"></div>
       <div className={`absolute inset-0 opacity-20 ${isVictory ? 'bg-green-900' : 'bg-red-900'} pointer-events-none`}></div>

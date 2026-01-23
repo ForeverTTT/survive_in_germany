@@ -1,5 +1,5 @@
-﻿<div align="center">
-<img width="1200" alt="GHBanner" src="image/intro.png" />
+<div align="center">
+<img width="1200" alt="GHBanner" src="assets/media/images/intro.png" />
 </div>
 
 # 🚆 德区留子生存模拟器 (German Student Survival Simulator)
@@ -29,7 +29,7 @@ npm run all
 ## 🎮 玩法介绍：你能挺到毕业吗？
 
 <div align="center">
-<img width="800" alt="主页面" src="image/game image/main page.png" />
+<img width="800" alt="主页面" src="assets/media/images/game image/main page.png" />
 </div>
 
 ### 🎭 身份觉醒
@@ -44,14 +44,14 @@ npm run all
 *   **Sanity (精神值)**：DB 延误、收到 ARD 账单、延签失败... 每一项都能让你瞬间破防。
 
 <div align="center">
-<img width="800" alt="游戏场景" src="image/game image/stage 1.png" />
+<img width="800" alt="游戏场景" src="assets/media/images/game image/stage 1.png" />
 </div>
 
 ### 🗺️ 非线性"生存地图"
 游戏不再是单行道。你的每一次选择都会在地图上开辟分支，你甚至可以点击地图上的旧节点"穿越"回过去，尝试另一种人生结局。
 
 <div align="center">
-<img width="800" alt="游戏地图" src="image/game image/map.png" />
+<img width="800" alt="游戏地图" src="assets/media/images/game image/map.png" />
 </div>
 
 ---
@@ -67,7 +67,7 @@ npm run all
 *   **🎭 沉浸式社交**：你会遇到严厉但可能有内推机会的 **Schmidt 教授**，或者是带你融入 WG 生活的 **Clara**。记住，在德国，人脉（Vitamin B）有时比绩点更重要。
 
 <div align="center">
-<img width="800" alt="社交系统" src="image/game image/social.png" />
+<img width="800" alt="社交系统" src="assets/media/images/game image/social.png" />
 </div>
 
 *   **🎲 随机微事件**：在加载界面的呼吸间，你可能会在地铁缝隙捡到 0.25 欧的瓶子，也可能因为周日超市关门而饿肚子。每一秒都在模拟真实的随机性。
