@@ -1,14 +1,15 @@
 {
   "stats": {
     "ects": 10,
-    "money": 4440,
-    "sanity": 100,
+    "money": 4320,
+    "sanity": 95,
     "semester": 1,
     "chapter": 1,
-    "level": 2,
+    "level": 4,
     "levelHistory": [
       "1-1",
-      "1-2"
+      "1-2",
+      "1-4"
     ],
     "historyLogs": [
       {
@@ -19,6 +20,15 @@
         "choiceMade": "咬牙叫车直奔宿舍（-60€）",
         "resultDescription": "车门合上的瞬间，暖气像一块毯子盖住你。司机用带口音的英语和你闲聊，你只想把头靠在玻璃上。钱包确实瘦了一圈，但你保住了体温，也保住了今晚“能睡着”的可能。",
         "timestamp": 1769128665840
+      },
+      {
+        "chapter": 1,
+        "level": 2,
+        "title": "宿舍的钥匙哪去了？",
+        "description": "宿舍楼的门禁像一张冷脸。你站在前台，湿掉的围巾贴在脖子上，前台工作人员用连珠炮一样的德语解释规则、签字、押金、以及那位“掌握钥匙命运”的管理员今天不在。你只抓住了两个词：明天、十点。你的行李在身后安静地立着，像在提醒你——你还没有家。",
+        "choiceMade": "花120€住一晚青旅，先把今天熬过去",
+        "resultDescription": "你拖着行李走进热闹的大厅，听见各国语言交错。热水冲下来的那一刻，你差点想哭。价格刺痛，但至少你今晚能洗掉一路的疲惫，明天再来和这套规则较劲。",
+        "timestamp": 1769130567959
       }
     ],
     "rngSeed": "hrffji",
@@ -77,13 +87,22 @@
     ],
     "mailbox": [
       {
+        "title": "外管局 Termin 确认信",
+        "sender": "Ausländerbehörde",
+        "content": "您的预约已确认。日期：下周二 08:15。请携带有效的护照、生物识别照片、当前的保险证明和资金证明。",
+        "type": "info",
+        "id": "letter_1769130567959_dnge8",
+        "timestamp": 1769130567959,
+        "isRead": true
+      },
+      {
         "id": "welcome_letter",
         "title": "欢迎来到德国！",
         "sender": "德国驻华大使馆",
         "content": "恭喜你获得了留学签证！你的留德生活正式开启。\n\n记住，在德国，信箱 (Briefkasten) 是非常重要的。你会收到来自政府、银行、保险公司甚至邻居的各种信件。请务必养成每天检查信箱的习惯，并确保你的名字贴在信箱上，否则你可能会错过重要的账单或通知。",
         "type": "info",
         "timestamp": 1769128606513,
-        "isRead": false
+        "isRead": true
       },
       {
         "id": "welcome_letter",
@@ -92,10 +111,18 @@
         "content": "恭喜你获得了留学签证！你的留德生活正式开启。\n\n记住，在德国，信箱 (Briefkasten) 是非常重要的。你会收到来自政府、银行、保险公司甚至邻居的各种信件。请务必养成每天检查信箱的习惯，并确保你的名字贴在信箱上，否则你可能会错过重要的账单或通知。",
         "type": "info",
         "timestamp": 1769128159425,
-        "isRead": false
+        "isRead": true
       }
     ],
     "memoryAlbum": [
+      {
+        "id": "img_1769130582984",
+        "url": "/image/de-survival-%E9%82%AE%E7%AE%B1%E9%87%8C%E7%9A%84%E2%80%9C%E9%BB%84%E8%89%B2%E5%99%A9%E6%A2%A6%E2%80%9D.png",
+        "title": "德意志银行开户之旅",
+        "chapter": 1,
+        "level": 4,
+        "timestamp": 1769130582984
+      },
       {
         "id": "img_1769128680895",
         "url": "/image/de-survival-DB%E7%9A%84%E8%83%8C%E5%88%BA%E4%B8%8E%E6%9C%80%E5%90%8E%E7%9A%84Termin.png",
@@ -117,24 +144,23 @@
     "identity": "tum_slave"
   },
   "currentScenario": {
-    "id": "1-2",
-    "title": "宿舍的钥匙哪去了？",
-    "description": "宿舍楼的门禁像一张冷脸。你站在前台，湿掉的围巾贴在脖子上，前台工作人员用连珠炮一样的德语解释规则、签字、押金、以及那位“掌握钥匙命运”的管理员今天不在。你只抓住了两个词：明天、十点。你的行李在身后安静地立着，像在提醒你——你还没有家。",
-    "imagePrompt": "dark university dormitory hallway, empty and cold, dim lighting",
+    "id": "1-4",
+    "title": "德意志银行开户之旅",
+    "description": "学校要求提供本地银行账户才能完成注册。你坐在银行明亮却冰冷的大厅里，号码牌跳得很慢，空气里有打印机的热味。轮到你时，对方列出一串材料：登记证明、学生身份、护照、居留许可。你想解释：居留许可又要求银行账户——像一条咬住自己尾巴的蛇。",
+    "imagePrompt": "German bank interior, sterile, cold atmosphere, waiting area",
     "options": [
       {
-        "text": "花120€住一晚青旅，先把今天熬过去",
-        "resultDescription": "你拖着行李走进热闹的大厅，听见各国语言交错。热水冲下来的那一刻，你差点想哭。价格刺痛，但至少你今晚能洗掉一路的疲惫，明天再来和这套规则较劲。",
+        "text": "把“死循环”讲清楚，硬着头皮争取通融",
+        "resultDescription": "你把流程一层层拆开讲给他听，讲到自己都想笑。对方沉默片刻，叹气说这事并不少见，最后允许你用入学相关材料先开账户。那一刻，你第一次觉得“规则”也可能有缝隙。",
         "statChanges": {
-          "money": -120,
-          "sanity": -5
+          "sanity": -10
         }
       },
       {
-        "text": "用蹩脚德语+手势求情，争取今晚能进门",
-        "resultDescription": "你把“刚到”“行李很重”“真的没地方去”一句句拼起来，语法错得离谱，眼神却很真。她沉默了几秒，翻出抽屉里一把备用钥匙，像是在给你一次试用期。你接过钥匙时，指尖都在抖。",
+        "text": "改走线上流程，先把账户弄出来",
+        "resultDescription": "你对着手机一步步完成身份验证，镜头里你的脸疲惫得像刚跑完马拉松。十分钟后账户就出现了——不够体面，但足够实用。你学会了留学生第一课：先活下去，再讲究。",
         "statChanges": {
-          "sanity": 10
+          "sanity": 5
         }
       }
     ]
@@ -149,5 +175,5 @@
     "showEffects": true,
     "useLLM": true
   },
-  "timestamp": 1769128680897
+  "timestamp": 1769130582987
 }
