@@ -11,6 +11,17 @@
 
 ## 🛠️ 紧急落地指南 (快速开始)
 
+### 0. 获取行李 (下载项目)
+首先，你需要把这个项目下载到本地。打开终端，执行：
+```bash
+git clone https://github.com/lilin9105/survive_in_germany.git
+cd survive_in_germany
+```
+> 💡 **没有 Git？** 
+> - Windows：下载安装 [Git for Windows](https://git-scm.com/download/win)
+> - Mac：在终端运行 `xcode-select --install` 或用 Homebrew `brew install git`
+> - 或者直接在 GitHub 页面点击绿色的 **Code** 按钮 → **Download ZIP**，解压后进入文件夹
+
 ### 1. 登机准备 (环境安装)
 你需要首先打开命令行, Node.js 环境。在终端执行：
 ```bash
