@@ -5,12 +5,21 @@ import { IDENTITIES } from '../constants';
 interface IdentitySelectorProps {
   onSelect: (identity: Identity) => void;
   onBack: () => void;
+  menuBg?: string;
 }
 
 const IdentitySelector: React.FC<IdentitySelectorProps> = ({ onSelect, onBack }) => {
   return (
-    <div className="fixed inset-0 z-[150] bg-black/95 backdrop-blur-3xl flex flex-col items-center justify-center p-6 animate-fadeIn text-white">
-      <div className="max-w-4xl w-full space-y-12">
+    <div className="fixed inset-0 z-[150] flex flex-col items-center justify-center p-6 animate-fadeIn text-white overflow-hidden">
+      {/* Background Layer - 使用纯色背景，不包含首页文字 */}
+      <div className="fixed inset-0 z-0 bg-black">
+        {/* 添加微妙的渐变效果，增加视觉层次 */}
+        <div className="absolute inset-0" style={{
+          background: 'radial-gradient(circle at center, rgba(30,30,30,1) 0%, rgba(0,0,0,1) 100%)',
+        }}></div>
+      </div>
+      
+      <div className="relative z-10 max-w-4xl w-full space-y-12">
         <div className="text-center space-y-4">
           <h2 className="text-4xl md:text-6xl font-black italic serif-font tracking-tight">选择你的降落身份</h2>
           <p className="text-gray-400 uppercase tracking-[0.3em] text-xs">Choose Your Identity in Germany</p>

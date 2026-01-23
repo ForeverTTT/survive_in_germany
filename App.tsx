@@ -514,18 +514,37 @@ const App: React.FC = () => {
     } catch {
       // ignore parse errors, allow save
     }
-    const newImage = {
-      id: `img_${Date.now()}`,
-      url,
-      title,
-      chapter: currentStats.chapter,
-      level: currentStats.level,
-      timestamp: Date.now()
-    };
-    setStats(prev => ({
-      ...prev,
-      memoryAlbum: [newImage, ...(prev.memoryAlbum || [])]
-    }));
+    // 确保每个关卡只保存一张图片：先删除该关卡之前的旧图片，再保存新图片
+    setStats(prev => {
+      // 检查是否已经存在相同场景和相同图片的记录
+      const existingSameImage = prev.memoryAlbum?.find(
+        img => img.chapter === currentStats.chapter && 
+               img.level === currentStats.level && 
+               img.url === url
+      );
+      if (existingSameImage) {
+        // 如果已存在完全相同的图片，不重复保存
+        return prev;
+      }
+      
+      // 删除该关卡之前的其他图片（确保每个关卡只有一张图片）
+      const filteredAlbum = (prev.memoryAlbum || []).filter(
+        img => !(img.chapter === currentStats.chapter && img.level === currentStats.level)
+      );
+      
+      const newImage = {
+        id: `img_${Date.now()}`,
+        url,
+        title,
+        chapter: currentStats.chapter,
+        level: currentStats.level,
+        timestamp: Date.now()
+      };
+      return {
+        ...prev,
+        memoryAlbum: [newImage, ...filteredAlbum]
+      };
+    });
   };
 
   // 只从“已成功加载过的背景”入相册：由 PlayPage 的 <img onLoad> 触发
@@ -541,10 +560,18 @@ const App: React.FC = () => {
 
   const handleBackgroundLoaded = (url: string) => {
     const pending = pendingAlbumRef.current;
-    if (!pending) return;
-    if (pending.url !== url) return; // 只认当前待入库的那张
-    addToMemoryAlbum(pending.url, pending.title, pending.statsSnapshot);
-    pendingAlbumRef.current = null;
+    
+    // 只保存通过 queueAlbumCapture 明确标记的图片，避免保存无关图片
+    if (pending) {
+      // 如果实际显示的图片和待保存的图片不同，使用实际显示的图片
+      // 这样可以确保相册中的图片和游戏实际显示的背景一致
+      const imageToSave = url;
+      const titleToSave = pending.title;
+      const statsToSave = pending.statsSnapshot;
+      addToMemoryAlbum(imageToSave, titleToSave, statsToSave);
+      pendingAlbumRef.current = null;
+    }
+    // 移除了 else if 分支，避免在没有明确标记时保存图片
   };
 
   // 日记逻辑
@@ -703,38 +730,93 @@ const App: React.FC = () => {
     const npc = stats.npcs.find(n => n.id === npcId);
     if (!npc || npc.isLocked) return;
 
-    const cost = type === 'party' ? { money: -50, sanity: 15 } : { sanity: -10, favor: 5 };
-    const newNpcs = stats.npcs.map(npc => {
-      if (npc.id === npcId) {
-        const newFavor = Math.min(100, npc.favorability + (type === 'party' ? 10 : 5));
-        return { ...npc, favorability: newFavor };
-      }
-      return npc;
-    });
-
     if (type === 'party' && stats.money < 50) {
-      showToast("余额不足，无法参加 Party");
+      showToast("钱包空空如也，连一瓶最便宜的 Oettinger 都买不起，还是别去 Party 丢人了...");
+      return;
+    }
+    if (type === 'study' && stats.sanity < 10) {
+      showToast("你的精神状态已经濒临崩溃，盯着课本看了一分钟，发现自己连标题的德语单词都不认识了...");
       return;
     }
 
+    const newNpcs = stats.npcs.map(n => {
+      if (n.id === npcId) {
+        const newFavor = Math.min(100, n.favorability + (type === 'party' ? 10 : 5));
+        return { ...n, favorability: newFavor };
+      }
+      return n;
+    });
+
     setStats(prev => ({
       ...prev,
-      money: prev.money + (type === 'party' ? -50 : 0),
+      money: Number((prev.money + (type === 'party' ? -50 : 0)).toFixed(2)),
       sanity: Math.max(0, Math.min(100, prev.sanity + (type === 'party' ? 15 : -10))),
       npcs: newNpcs
     }));
-    showToast(type === 'party' ? "Party 玩得很开心！好感度+10" : "共同学习虽然累，但收获满满。好感度+5");
+
+    const partyMsgs = [
+      "Party 上的音乐震耳欲聋，你虽然听不懂他们在聊什么，但跟着点头就对了！好感度+10",
+      "你带了一包超市买的薯片，竟然成了 Party 上的抢手货。好感度+10",
+      "在酒精和音乐的加持下，你的德语口语水平瞬间提升到了 C2（自以为）。好感度+10"
+    ];
+    const studyMsgs = [
+      "共同学习了两小时，你们最后花了一个半小时讨论哪家 Döner 最好吃。好感度+5",
+      "虽然课本没看进去多少，但你们交换了彼此的吐槽，革命友谊升华了。好感度+5",
+      "你成功向对方解释了一个复杂的概念，对方露出了崇拜（或者是困惑）的眼神。好感度+5"
+    ];
+
+    const msg = type === 'party' 
+      ? partyMsgs[Math.floor(Math.random() * partyMsgs.length)]
+      : studyMsgs[Math.floor(Math.random() * studyMsgs.length)];
+    
+    showToast(msg);
   };
 
   const handleCrisisDecision = (impact: any, result: string) => {
-    setStats(prev => ({
-      ...prev,
-      money: prev.money + (impact.money || 0),
-      sanity: Math.max(0, Math.min(100, prev.sanity + (impact.sanity || 0))),
-      ects: prev.ects + (impact.ects || 0)
-    }));
     setActiveCrisis(null);
     showToast(result);
+
+    setStats(prev => {
+      const updatedStats = {
+        ...prev,
+        money: Number((prev.money + (impact.money || 0)).toFixed(2)),
+        sanity: Math.max(0, Math.min(100, prev.sanity + (impact.sanity || 0))),
+        ects: prev.ects + (impact.ects || 0)
+      };
+
+      // 突发事件解决后，必须手动触发进入下一关的渲染流程
+      // 因为 handleOptionSelect 之前已经在 shouldTriggerCrisis 分支中提前返回了
+      setTimeout(() => {
+        const nextChapter = updatedStats.chapter;
+        const nextLevel = updatedStats.level;
+        
+        setLoadingMsg(LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)]);
+        navigate('/loading');
+        
+        const nextScenario = getScenarioByChapterLevel(nextChapter, nextLevel);
+        if (nextScenario) {
+          setCurrentScenario(nextScenario);
+          generateScenarioImage(nextScenario.imagePrompt).then(generatedImage => {
+            setBgImage(generatedImage);
+            queueAlbumCapture(generatedImage, nextScenario.title, updatedStats);
+          }).catch(err => {
+            console.error("图片生成失败:", err);
+            const fallback = bgImage || pickRandomLocalSceneBg();
+            setBgImage(fallback);
+            queueAlbumCapture(fallback, nextScenario.title, updatedStats);
+          });
+          
+          setTimeout(() => {
+            navigate('/play', { replace: true, state: { loading: true } });
+          }, 8000);
+        } else {
+          // 如果没有下一关，判定为胜利
+          navigate('/victory');
+        }
+      }, 500);
+
+      return updatedStats;
+    });
   };
 
   const resetToMenu = useCallback(() => setShowConfirmMenu(true), []);
@@ -905,7 +987,7 @@ const App: React.FC = () => {
     const newStats: GameStats = {
       ...stats,
       ects: stats.ects + (option.statChanges.ects || 0),
-      money: stats.money + (option.statChanges.money || 0),
+      money: Number((stats.money + (option.statChanges.money || 0)).toFixed(2)),
       sanity: Math.max(0, Math.min(100, stats.sanity + sanityChange)),
       semester: nextSemester,
       chapter: nextChapter,
@@ -948,7 +1030,7 @@ const App: React.FC = () => {
       // 随机加载小事件 (RNG Check)
       const impact: any = rollMicroEvent(newStats);
       if (Object.keys(impact).length > 0) {
-        newStats.money += (impact.money || 0);
+        newStats.money = Number((newStats.money + (impact.money || 0)).toFixed(2));
         newStats.sanity += (impact.sanity || 0);
         setStats({ ...newStats });
       }
@@ -1124,7 +1206,7 @@ const App: React.FC = () => {
       {showIdentitySelector && (
         <IdentitySelector 
           onSelect={handleIdentitySelect} 
-          onBack={() => setShowIdentitySelector(false)} 
+          onBack={() => setShowIdentitySelector(false)}
         />
       )}
       {showMailbox && (

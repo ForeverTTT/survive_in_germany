@@ -79,10 +79,10 @@ const StatBar: React.FC<StatBarProps> = ({ stats, onHomeClick, onMapClick, onSav
           </div>
           <div className="flex flex-col items-center relative">
             <span className="text-[9px] md:text-[10px] uppercase tracking-widest text-gray-400">Cash</span>
-            <span className="text-base md:text-lg font-bold text-green-500">€{stats.money}</span>
+            <span className="text-base md:text-lg font-bold text-green-500">€{stats.money.toFixed(2)}</span>
             {feedbacks.filter(f => f.type === 'money').map(f => (
               <div key={f.id} className={`absolute -bottom-8 animate-float-up font-bold text-sm ${f.value > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {f.value > 0 ? `+${f.value}€` : `${f.value}€`}
+                {f.value > 0 ? `+${f.value.toFixed(2)}€` : `${f.value.toFixed(2)}€`}
               </div>
             ))}
           </div>

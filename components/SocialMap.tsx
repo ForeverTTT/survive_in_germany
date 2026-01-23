@@ -121,9 +121,28 @@ const SocialMap: React.FC<SocialMapProps> = ({ stats, onInteract, onClose }) => 
 
         {/* Right Side: NPC Details & Interactions */}
         <div className="w-full md:w-[350px] flex flex-col gap-6">
-          <div className="flex-none space-y-2">
-            <h2 className="text-4xl font-black serif-font italic text-white tracking-tight">社交地图</h2>
-            <p className="text-[10px] uppercase tracking-[0.4em] text-white/30">Social Connection Graph</p>
+          <div className="flex-none flex justify-between items-start">
+            <div className="space-y-2">
+              <h2 className="text-4xl font-black serif-font italic text-white tracking-tight">社交地图</h2>
+              <p className="text-[10px] uppercase tracking-[0.4em] text-white/30">Social Connection Graph</p>
+            </div>
+            {/* Mini Stats Display */}
+            <div className="flex flex-col items-end gap-1 bg-white/5 backdrop-blur-md p-3 rounded-2xl border border-white/10">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-gray-400 uppercase font-bold">Cash</span>
+                <span className="text-sm font-bold text-green-500">€{stats.money.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-gray-400 uppercase font-bold">Sanity</span>
+                <div className="w-12 h-1 bg-gray-800 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-500 ${stats.sanity > 50 ? 'bg-blue-500' : stats.sanity > 20 ? 'bg-orange-500' : 'bg-red-600'}`}
+                    style={{ width: `${stats.sanity}%` }}
+                  />
+                </div>
+                <span className="text-[10px] font-bold text-white">{stats.sanity}</span>
+              </div>
+            </div>
           </div>
 
           <div className="flex-1 bg-white/5 border border-white/10 rounded-3xl p-6 overflow-y-auto social-scroll flex flex-col backdrop-blur-md">
@@ -158,26 +177,28 @@ const SocialMap: React.FC<SocialMapProps> = ({ stats, onInteract, onClose }) => 
                 <div className="grid grid-cols-1 gap-3 pt-4">
                   <button 
                     onClick={() => onInteract(selectedNpc.id, 'party')}
-                    className="group relative p-4 bg-purple-500/10 hover:bg-purple-600 text-left transition-all duration-500 border border-purple-500/20 rounded-xl overflow-hidden"
+                    disabled={stats.money < 50}
+                    className={`group relative p-4 bg-purple-500/10 hover:bg-purple-600 text-left transition-all duration-500 border border-purple-500/20 rounded-xl overflow-hidden ${stats.money < 50 ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <div className="relative z-10 flex justify-between items-center">
                       <div>
                         <span className="block text-[8px] uppercase font-black text-purple-400 group-hover:text-purple-200 mb-1">WG Party</span>
                         <span className="text-sm font-bold text-white group-hover:text-black">邀请参加聚会</span>
                       </div>
-                      <span className="text-xs font-black group-hover:text-black">-50€ / +15 Sanity</span>
+                      <span className={`text-xs font-black group-hover:text-black ${stats.money < 50 ? 'text-red-500' : ''}`}>-50€ / +15 Sanity</span>
                     </div>
                   </button>
                   <button 
                     onClick={() => onInteract(selectedNpc.id, 'study')}
-                    className="group relative p-4 bg-blue-500/10 hover:bg-blue-600 text-left transition-all duration-500 border border-blue-500/20 rounded-xl overflow-hidden"
+                    disabled={stats.sanity < 10}
+                    className={`group relative p-4 bg-blue-500/10 hover:bg-blue-600 text-left transition-all duration-500 border border-blue-500/20 rounded-xl overflow-hidden ${stats.sanity < 10 ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <div className="relative z-10 flex justify-between items-center">
                       <div>
                         <span className="block text-[8px] uppercase font-black text-blue-400 group-hover:text-blue-200 mb-1">Study Session</span>
                         <span className="text-sm font-bold text-white group-hover:text-black">共同学习讨论</span>
                       </div>
-                      <span className="text-xs font-black group-hover:text-black">-10 Sanity / +5 Favor</span>
+                      <span className={`text-xs font-black group-hover:text-black ${stats.sanity < 10 ? 'text-red-500' : ''}`}>-10 Sanity / +5 Favor</span>
                     </div>
                   </button>
                 </div>
